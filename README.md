@@ -47,14 +47,16 @@ Covers all five NPS protocols: NCP + NWP + NIP + NDP + NOP. 87 tests passing.
 
 ## Modules
 
-| Package | Description |
-|---------|-------------|
-| `com.labacacia.nps.core` | Frame header, codec (Tier-1 JSON / Tier-2 MsgPack), frame registry, anchor cache, exceptions |
-| `com.labacacia.nps.ncp`  | NCP frames: `AnchorFrame`, `DiffFrame`, `StreamFrame`, `CapsFrame`, `ErrorFrame` |
-| `com.labacacia.nps.nwp`  | NWP frames: `QueryFrame`, `ActionFrame`, `AsyncActionResponse`; `NwpClient` (HTTP) |
-| `com.labacacia.nps.nip`  | NIP frames: `IdentFrame`, `TrustFrame`, `RevokeFrame`; `NipIdentity` (Ed25519) |
-| `com.labacacia.nps.ndp`  | NDP frames: `AnnounceFrame`, `ResolveFrame`, `GraphFrame`; `InMemoryNdpRegistry`, `NdpAnnounceValidator` |
-| `com.labacacia.nps.nop`  | NOP frames: `TaskFrame`, `DelegateFrame`, `SyncFrame`, `AlignStreamFrame`; `BackoffStrategy`, `NopTaskStatus` |
+| Package | Description | Reference |
+|---------|-------------|-----------|
+| `com.labacacia.nps.core` | Frame header, codec (Tier-1 JSON / Tier-2 MsgPack), frame registry, anchor cache, exceptions | [`doc/nps-java.core.md`](./doc/nps-java.core.md) |
+| `com.labacacia.nps.ncp`  | NCP frames: `AnchorFrame`, `DiffFrame`, `StreamFrame`, `CapsFrame`, `ErrorFrame` | [`doc/nps-java.ncp.md`](./doc/nps-java.ncp.md) |
+| `com.labacacia.nps.nwp`  | NWP frames: `QueryFrame`, `ActionFrame`, `AsyncActionResponse`; `NwpClient` (HTTP) | [`doc/nps-java.nwp.md`](./doc/nps-java.nwp.md) |
+| `com.labacacia.nps.nip`  | NIP frames: `IdentFrame`, `TrustFrame`, `RevokeFrame`; `NipIdentity` (Ed25519) | [`doc/nps-java.nip.md`](./doc/nps-java.nip.md) |
+| `com.labacacia.nps.ndp`  | NDP frames: `AnnounceFrame`, `ResolveFrame`, `GraphFrame`; `InMemoryNdpRegistry`, `NdpAnnounceValidator` | [`doc/nps-java.ndp.md`](./doc/nps-java.ndp.md) |
+| `com.labacacia.nps.nop`  | NOP frames: `TaskFrame`, `DelegateFrame`, `SyncFrame`, `AlignStreamFrame`; `BackoffStrategy`, `NopTaskStatus` | [`doc/nps-java.nop.md`](./doc/nps-java.nop.md) |
+
+Full API reference (per-module class and method docs) lives under [`doc/`](./doc/) — start with [`doc/overview.md`](./doc/overview.md).
 
 ## Quick Start
 
