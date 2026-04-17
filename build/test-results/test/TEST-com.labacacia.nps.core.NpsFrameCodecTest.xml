@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.labacacia.nps.core.NpsFrameCodecTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-04-16T23:16:10" hostname="ols-ts01" time="0.089">
+  <properties/>
+  <testcase name="encodesDecodesStreamFrameFinal()" classname="com.labacacia.nps.core.NpsFrameCodecTest" time="0.019"/>
+  <testcase name="encodesDecodesAnchorFrameJson()" classname="com.labacacia.nps.core.NpsFrameCodecTest" time="0.043"/>
+  <testcase name="encodesDecodesErrorFrame()" classname="com.labacacia.nps.core.NpsFrameCodecTest" time="0.001"/>
+  <testcase name="peekHeaderDecodesOnlyHeader()" classname="com.labacacia.nps.core.NpsFrameCodecTest" time="0.001"/>
+  <testcase name="throwsWhenPayloadExceedsMaxPayload()" classname="com.labacacia.nps.core.NpsFrameCodecTest" time="0.006"/>
+  <testcase name="encodesDecodesDiffFrame()" classname="com.labacacia.nps.core.NpsFrameCodecTest" time="0.002"/>
+  <testcase name="encodesDecodesAnchorFrameMsgPack()" classname="com.labacacia.nps.core.NpsFrameCodecTest" time="0.001"/>
+  <testcase name="encodesDecodesStreamFrameNonFinal()" classname="com.labacacia.nps.core.NpsFrameCodecTest" time="0.001"/>
+  <testcase name="registryThrowsForUnknownType()" classname="com.labacacia.nps.core.NpsFrameCodecTest" time="0.001"/>
+  <testcase name="setsExtFlagWhenPayloadExceeds64KiB()" classname="com.labacacia.nps.core.NpsFrameCodecTest" time="0.008"/>
+  <testcase name="encodesDecodesCapsFrame()" classname="com.labacacia.nps.core.NpsFrameCodecTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

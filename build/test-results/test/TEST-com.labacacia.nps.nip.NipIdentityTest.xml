@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.labacacia.nps.nip.NipIdentityTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-04-16T23:16:10" hostname="ols-ts01" time="3.278">
+  <properties/>
+  <testcase name="verifyReturnsFalseForTamperedPayload()" classname="com.labacacia.nps.nip.NipIdentityTest" time="0.005"/>
+  <testcase name="revokeFrameRoundtrip()" classname="com.labacacia.nps.nip.NipIdentityTest" time="0.001"/>
+  <testcase name="identFrameRoundtrip()" classname="com.labacacia.nps.nip.NipIdentityTest" time="0.002"/>
+  <testcase name="trustFrameRoundtrip()" classname="com.labacacia.nps.nip.NipIdentityTest" time="0.001"/>
+  <testcase name="revokeFrameOptionalFieldsNull()" classname="com.labacacia.nps.nip.NipIdentityTest" time="0.001"/>
+  <testcase name="generateCreatesDistinctKeys()" classname="com.labacacia.nps.nip.NipIdentityTest" time="0.003"/>
+  <testcase name="verifyReturnsFalseForWrongPrefix()" classname="com.labacacia.nps.nip.NipIdentityTest" time="0.003"/>
+  <testcase name="saveAndLoadRoundtrip(Path)" classname="com.labacacia.nps.nip.NipIdentityTest" time="1.8"/>
+  <testcase name="verifyReturnsFalseForCorruptedBase64()" classname="com.labacacia.nps.nip.NipIdentityTest" time="0.001"/>
+  <testcase name="signIsCanonicalKeyOrderIndependent()" classname="com.labacacia.nps.nip.NipIdentityTest" time="0.004"/>
+  <testcase name="signVerifyRoundtrip()" classname="com.labacacia.nps.nip.NipIdentityTest" time="0.005"/>
+  <testcase name="pubKeyStringFormat()" classname="com.labacacia.nps.nip.NipIdentityTest" time="0.002"/>
+  <testcase name="loadWithWrongPassphraseThrows(Path)" classname="com.labacacia.nps.nip.NipIdentityTest" time="1.434"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
