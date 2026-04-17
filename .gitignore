@@ -1,3 +1,6 @@
+# Release packages (built artifacts — attached to GitHub Release)
+package/
+
 # Compiled class file
 *.class
 
