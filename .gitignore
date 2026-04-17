@@ -1,6 +1,10 @@
 # Release packages (built artifacts — attached to GitHub Release)
 package/
 
+# Gradle build outputs and cache
+build/
+.gradle/
+
 # Compiled class file
 *.class
 
