@@ -1,3 +1,5 @@
+English | [中文版](./nps-java.nwp.cn.md)
+
 # `com.labacacia.nps.nwp` — Class and Method Reference
 
 > Spec: [NPS-2 NWP v0.4](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-2-NWP.md)
