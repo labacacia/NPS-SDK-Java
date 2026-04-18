@@ -1,19 +1,19 @@
-English | [中文版](./nps-java.ncp.cn.md)
+[English Version](./nps-java.ncp.md) | 中文版
 
-# `com.labacacia.nps.ncp` — Class and Method Reference
+# `com.labacacia.nps.ncp` — 类与方法参考
 
-> Spec: [NPS-1 NCP v0.4](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-1-NCP.md)
+> 规范：[NPS-1 NCP v0.4](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-1-NCP.md)
 
-NCP is the wire-and-schema layer. The Java SDK exposes the five core
-frames — `AnchorFrame`, `DiffFrame`, `StreamFrame`, `CapsFrame`,
-`ErrorFrame` — plus the `SchemaField` record used to build schemas.
+NCP 是线路与 schema 层。Java SDK 暴露五个核心帧 ——
+`AnchorFrame`、`DiffFrame`、`StreamFrame`、`CapsFrame`、
+`ErrorFrame` —— 以及用于构建 schema 的 `SchemaField` record。
 
-All frame classes are `final`, implement `NpsFrame`, and expose a static
-`fromDict` factory for decoding.
+所有帧类均为 `final`、实现 `NpsFrame`，并提供静态
+`fromDict` 工厂方法用于解码。
 
 ---
 
-## Table of contents
+## 目录
 
 - [`SchemaField`](#schemafield)
 - [`AnchorFrame` (0x01)](#anchorframe-0x01)
@@ -32,7 +32,7 @@ public record SchemaField(
     String  name,
     String  type,      // "string" | "uint64" | "int64" | "decimal" | "bool" |
                        // "timestamp" | "bytes" | "object" | "array"
-    String  semantic,  // nullable — optional NPS semantic tag
+    String  semantic,  // nullable —— 可选的 NPS 语义标签
     Boolean nullable   // nullable
 ) {
     public SchemaField(String name, String type);  // semantic + nullable = null
@@ -41,16 +41,15 @@ public record SchemaField(
 }
 ```
 
-Schemas are carried as `Map<String, Object>` on the wire (`toDict`/`fromDict`
-round-trips to the shape `{"fields": [{…}, {…}]}`). Use `SchemaField`
-only as a typed builder; always convert to `Map` before handing to
-`AnchorFrame`.
+Schema 在线路上以 `Map<String, Object>` 形式携带（`toDict`/`fromDict`
+的往返形态是 `{"fields": [{…}, {…}]}`）。`SchemaField`
+只作为带类型的构建器使用；交给 `AnchorFrame` 之前总是先转换为 `Map`。
 
 ---
 
 ## `AnchorFrame` (0x01)
 
-Content-addressed schema advertisement.
+内容寻址的 schema 广告。
 
 ```java
 public final class AnchorFrame implements NpsFrame {
@@ -59,20 +58,20 @@ public final class AnchorFrame implements NpsFrame {
 
     public String              anchorId();
     public Map<String, Object> schema();
-    public int                 ttl();       // seconds — 0 = session-only
+    public int                 ttl();       // 秒 —— 0 表示仅本 session
 }
 ```
 
-- `preferredTier()` → `MSGPACK`.
-- `anchorId` MUST equal `AnchorFrameCache.computeAnchorId(schema)` when
-  the frame is authoritative; otherwise poison detection will reject it
-  on the receiver side.
+- `preferredTier()` → `MSGPACK`。
+- 当该帧为权威源时，`anchorId` 必须等于
+  `AnchorFrameCache.computeAnchorId(schema)`；否则接收方的投毒
+  检测会将其拒绝。
 
 ---
 
 ## `DiffFrame` (0x02)
 
-Incremental data patch anchored to a prior `AnchorFrame`.
+锚定到先前 `AnchorFrame` 的增量数据补丁。
 
 ```java
 public final class DiffFrame implements NpsFrame {
@@ -81,21 +80,20 @@ public final class DiffFrame implements NpsFrame {
 
     public String                     anchorRef();
     public int                        baseSeq();
-    public List<Map<String, Object>>  patch();     // RFC 6902 JSON-Patch ops
+    public List<Map<String, Object>>  patch();     // RFC 6902 JSON-Patch 操作
     public String                     entityId();  // nullable
 }
 ```
 
-Each patch entry is a map with `op` / `path` / `value` / `from` keys
-matching RFC 6902. The binary-bitset variant from NPS-1 §3.2 is not yet
-surfaced as a first-class type — embed raw bytes in a single-op patch
-when needed.
+每个 patch 条目是一个含 `op` / `path` / `value` / `from` 键的 Map，
+符合 RFC 6902。NPS-1 §3.2 中的二进制位图变体尚未作为一等
+类型暴露 —— 需要时将原始字节嵌入单个 op 的 patch。
 
 ---
 
 ## `StreamFrame` (0x03)
 
-Streaming chunk frame.
+流式分块帧。
 
 ```java
 public final class StreamFrame implements NpsFrame {
@@ -108,28 +106,27 @@ public final class StreamFrame implements NpsFrame {
     public boolean                    isLast();
     public List<Map<String, Object>>  data();
     public String                     anchorRef();   // nullable
-    public Integer                    windowSize();  // nullable — back-pressure hint
+    public Integer                    windowSize();  // nullable —— 背压提示
 }
 ```
 
-The codec uses `isLast()` to decide whether to set the `FINAL` flag on
-the header. Non-last `StreamFrame`s ship with `FINAL=0`; the terminal
-frame with `FINAL=1`.
+编解码器根据 `isLast()` 决定是否在帧头设置 `FINAL` flag。
+非末尾 `StreamFrame` 以 `FINAL=0` 发送；末尾帧设 `FINAL=1`。
 
 ---
 
 ## `CapsFrame` (0x04)
 
-Capsule — a complete result page referencing a cached schema.
+Capsule —— 引用已缓存 schema 的完整结果页。
 
 ```java
 public final class CapsFrame implements NpsFrame {
     public CapsFrame(String anchorRef, int count,
                      List<Map<String, Object>> data,
                      String  nextCursor,    // nullable
-                     Integer tokenEst,      // nullable — NPT estimate
+                     Integer tokenEst,      // nullable —— NPT 估算
                      Boolean cached,        // nullable
-                     String  tokenizerUsed  // nullable — tokenizer URN
+                     String  tokenizerUsed  // nullable —— tokenizer URN
     );
     public CapsFrame(String anchorRef, int count, List<Map<String, Object>> data);
 
@@ -143,47 +140,47 @@ public final class CapsFrame implements NpsFrame {
 }
 ```
 
-`count` SHOULD equal `data.size()` — the .NET and Python validators
-enforce this. The Java SDK currently trusts the constructor caller; if
-you parse `CapsFrame` from untrusted peers, add the check yourself.
+`count` 应等于 `data.size()` —— .NET 与 Python 的校验器对此
+强制检查。Java SDK 目前信任构造函数调用方；若需从不可信
+对端解析 `CapsFrame`，请自行添加检查。
 
 ---
 
 ## `ErrorFrame` (0xFE)
 
-Unified error frame shared by every NPS protocol layer (NPS-0 §9).
+所有 NPS 协议层共享的统一错误帧（NPS-0 §9）。
 
 ```java
 public final class ErrorFrame implements NpsFrame {
     public ErrorFrame(String status, String error,
                       String message, Map<String, Object> details);
 
-    public String              status();   // NPS status code, e.g. "NPS-CLIENT-NOT-FOUND"
-    public String              error();    // protocol code, e.g. "NCP-ANCHOR-NOT-FOUND"
+    public String              status();   // NPS 状态码，如 "NPS-CLIENT-NOT-FOUND"
+    public String              error();    // 协议码，如 "NCP-ANCHOR-NOT-FOUND"
     public String              message();  // nullable
     public Map<String, Object> details();  // nullable
 }
 ```
 
-Test for the error envelope with `frame instanceof ErrorFrame err`.
+用 `frame instanceof ErrorFrame err` 判定错误信封。
 
 ---
 
 ## `NcpFrameRegistrar`
 
-Registers all five NCP frames against a `FrameRegistry`:
+向 `FrameRegistry` 注册全部五个 NCP 帧：
 
 ```java
 FrameRegistry reg = new FrameRegistry();
 NcpFrameRegistrar.register(reg);
-// registers ANCHOR, DIFF, STREAM, CAPS, ERROR
+// 注册 ANCHOR, DIFF, STREAM, CAPS, ERROR
 ```
 
-`NpsRegistries.createDefault()` / `createFull()` call this for you.
+`NpsRegistries.createDefault()` / `createFull()` 会为你调用此方法。
 
 ---
 
-## End-to-end example
+## 端到端示例
 
 ```java
 import com.labacacia.nps.core.codec.NpsFrameCodec;
