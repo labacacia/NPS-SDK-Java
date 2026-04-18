@@ -1,3 +1,5 @@
+English | [中文版](./README.cn.md)
+
 # NPS Java SDK
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](../../LICENSE)
