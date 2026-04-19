@@ -14,6 +14,7 @@ public final class NcpFrameRegistrar {
         r.register(FrameType.DIFF,   DiffFrame::fromDict);
         r.register(FrameType.STREAM, StreamFrame::fromDict);
         r.register(FrameType.CAPS,   CapsFrame::fromDict);
+        r.register(FrameType.HELLO,  HelloFrame::fromDict);
         r.register(FrameType.ERROR,  ErrorFrame::fromDict);
     }
 }

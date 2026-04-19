@@ -33,3 +33,6 @@ replay_pid*
 # Maven publishing secrets
 gradle.properties
 signing.gpg
+
+# Claude Code local ignore file (per-developer)
+.claudeignore

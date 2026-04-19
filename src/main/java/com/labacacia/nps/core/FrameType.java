@@ -9,6 +9,7 @@ public enum FrameType {
     DIFF        (0x02),
     STREAM      (0x03),
     CAPS        (0x04),
+    HELLO       (0x06),
     // NWP
     QUERY       (0x10),
     ACTION      (0x11),

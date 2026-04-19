@@ -106,4 +106,49 @@ class NpsFrameCodecTest {
         assertThrows(com.labacacia.nps.core.exception.NpsFrameError.class,
             () -> r.resolve(FrameType.ANCHOR));
     }
+
+    @Test void helloFramePreferredTierIsJson() {
+        var frame = new HelloFrame("0.2", List.of("tier-1","tier-2"), List.of("ncp","nwp"));
+        assertEquals(EncodingTier.JSON, frame.preferredTier());
+        assertEquals(FrameType.HELLO,   frame.frameType());
+    }
+
+    @Test void encodesDecodesHelloFrameFull() {
+        var frame = new HelloFrame(
+            "0.2",
+            List.of("tier-1", "tier-2"),
+            List.of("ncp", "nwp", "nip"),
+            "0.1",
+            "urn:nps:agent:example.com:hello-1",
+            0xFFFF,
+            true,
+            64,
+            List.of("aes-256-gcm"));
+        var out = (HelloFrame) codec.decode(codec.encode(frame));  // preferred = JSON
+        assertEquals("0.2", out.npsVersion());
+        assertEquals(List.of("tier-1","tier-2"),          out.supportedEncodings());
+        assertEquals(List.of("ncp","nwp","nip"),          out.supportedProtocols());
+        assertEquals("0.1",                               out.minVersion());
+        assertEquals("urn:nps:agent:example.com:hello-1", out.agentId());
+        assertTrue(out.extSupport());
+        assertEquals(64, out.maxConcurrentStreams());
+        assertEquals(List.of("aes-256-gcm"), out.e2eEncAlgorithms());
+    }
+
+    @Test void encodesDecodesHelloFrameMinimalMsgPack() {
+        var frame = new HelloFrame("0.2", List.of("tier-1"), List.of("ncp"));
+        var wire  = codec.encode(frame, EncodingTier.MSGPACK);
+        var out   = (HelloFrame) codec.decode(wire);
+        assertEquals("0.2", out.npsVersion());
+        assertNull(out.minVersion());
+        assertNull(out.agentId());
+        assertNull(out.e2eEncAlgorithms());
+        assertFalse(out.extSupport());
+        assertEquals(0xFFFF, out.maxFramePayload());
+        assertEquals(32,     out.maxConcurrentStreams());
+    }
+
+    @Test void helloFrameTypeCodeIs06() {
+        assertEquals(0x06, FrameType.HELLO.code);
+    }
 }

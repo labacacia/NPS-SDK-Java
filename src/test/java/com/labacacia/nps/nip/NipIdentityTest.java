@@ -87,10 +87,19 @@ class NipIdentityTest {
 
     @Test void trustFrameRoundtrip() {
         var codec = new NpsFrameCodec(NpsRegistries.createFull());
-        var frame = new TrustFrame("urn:nps:node:a:1", "urn:nps:node:b:1",
-            List.of("nwp/query"), "2027-01-01T00:00:00Z", "ed25519:sig");
-        var out   = (TrustFrame) codec.decode(codec.encode(frame));
-        assertEquals("urn:nps:node:b:1", out.subjectNid());
+        var frame = new TrustFrame(
+            "urn:nps:org:org-a.com",
+            "urn:nps:org:org-b.com",
+            List.of("nwp:query", "nwp:stream"),
+            List.of("nwp://api.org-a.com/public/*"),
+            "2027-01-01T00:00:00Z",
+            "ed25519:sig");
+        var out = (TrustFrame) codec.decode(codec.encode(frame));
+        assertEquals("urn:nps:org:org-a.com", out.grantorNid());
+        assertEquals("urn:nps:org:org-b.com", out.granteeCa());
+        assertEquals(List.of("nwp:query", "nwp:stream"), out.trustScope());
+        assertEquals(List.of("nwp://api.org-a.com/public/*"), out.nodes());
+        assertNull(frame.unsignedDict().get("signature"));
     }
 
     @Test void revokeFrameRoundtrip() {
