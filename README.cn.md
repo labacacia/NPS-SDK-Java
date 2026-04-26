@@ -8,7 +8,7 @@
 
 ## 状态
 
-**v1.0.0-alpha.2 — Phase 1 / Phase 2 同步 alpha 发布**
+**v1.0.0-alpha.3 — Phase 1 / Phase 2 同步 alpha 发布**
 
 覆盖 NCP + NWP + NIP + NDP + NOP 五个协议。
 

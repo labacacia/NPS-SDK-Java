@@ -8,7 +8,7 @@ Package group: `com.labacacia.nps` | Java 21+ | Gradle 8+
 
 ## Status
 
-**v1.0.0-alpha.2 — Phase 1 / Phase 2 sync release**
+**v1.0.0-alpha.3 — Phase 1 / Phase 2 sync release**
 
 Covers all five NPS protocols: NCP + NWP + NIP + NDP + NOP.
 
