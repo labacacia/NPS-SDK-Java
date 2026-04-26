@@ -9,7 +9,7 @@ plugins {
 }
 
 group   = "com.labacacia.nps"
-version = "1.0.0-alpha.2"
+version = "1.0.0-alpha.3"
 
 java {
     toolchain { languageVersion = JavaLanguageVersion.of(21) }
@@ -57,7 +57,7 @@ publishing {
             from(components["java"])
             groupId    = "com.labacacia.nps"
             artifactId = "nps-java"
-            version    = "1.0.0-alpha.2"
+            version    = "1.0.0-alpha.3"
 
             pom {
                 name        = "NPS Java SDK"
