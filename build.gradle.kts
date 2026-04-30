@@ -9,7 +9,7 @@ plugins {
 }
 
 group   = "com.labacacia.nps"
-version = "1.0.0-alpha.3"
+version = "1.0.0-alpha.4"
 
 java {
     toolchain { languageVersion = JavaLanguageVersion.of(21) }
@@ -31,11 +31,21 @@ dependencies {
     // Logging façade
     implementation("org.slf4j:slf4j-api:2.0.13")
 
+    // BouncyCastle — X.509 cert building (NPS-RFC-0002).
+    // Signing/verification still uses native JCA Ed25519; BC is only needed
+    // for the X.509 builder API which the JDK does not expose publicly.
+    implementation("org.bouncycastle:bcprov-jdk18on:1.79")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.79")
+
     // ── Test ──────────────────────────────────────────────────────────────────
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.0")
     testImplementation("org.mockito:mockito-core:5.12.0")
     testImplementation("org.mockito:mockito-junit-jupiter:5.12.0")
     testRuntimeOnly("org.slf4j:slf4j-simple:2.0.13")
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
 }
 
 tasks.test {
@@ -57,7 +67,7 @@ publishing {
             from(components["java"])
             groupId    = "com.labacacia.nps"
             artifactId = "nps-java"
-            version    = "1.0.0-alpha.3"
+            version    = "1.0.0-alpha.4"
 
             pom {
                 name        = "NPS Java SDK"

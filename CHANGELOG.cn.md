@@ -8,6 +8,57 @@
 
 ---
 
+## [1.0.0-alpha.4] —— 2026-04-30
+
+### 新增
+
+- **NPS-RFC-0001 Phase 2 —— NCP 连接前导（Java helper 跟进）。**
+  `com.labacacia.nps.ncp.NcpPreamble` 暴露
+  `writePreamble(OutputStream)` / `readPreamble(InputStream)`，往返
+  字面量 `b"NPS/1.0\n"` 哨兵；`NcpPreambleTests` 覆盖。让 Java SDK
+  与 .NET / Python / TypeScript / Go 在 alpha.4 的 preamble helper
+  持平。
+- **NPS-RFC-0002 Phase A/B —— X.509 NID 证书 + ACME `agent-01`
+  （Java 端口）。** 新增 `com.labacacia.nps.nip` 子包：
+  - `nip.x509` —— X.509 NID 证书 builder + verifier（基于 Bouncy
+    Castle）。
+  - `nip.acme` —— ACME `agent-01` 客户端 + 服务端参考实现（挑战
+    签发、key authorization、按 NPS-RFC-0002 Phase B 的 JWS 签名
+    wire 包络）。
+  - `nip.AssuranceLevel` —— Agent 身份保证等级
+    （`anonymous` / `attested` / `verified`），承接 NPS-RFC-0003。
+  - `nip.IdentCertFormat` —— IdentFrame 的 `cert_format` 判别器
+    （`v1` Ed25519 vs. `x509`）。
+  - `nip.NipErrorCodes` —— NIP 错误码命名空间。
+  - `nip.NipIdentVerifier` + `NipIdentVerifyResult` +
+    `NipVerifierOptions` —— dual-trust IdentFrame 验证器
+    （v1 + X.509）。
+  - `nip.NipCanonicalJson` —— canonical JSON 帮助类，给验证器和
+    X.509 builder 用。
+- 新增测试：`NcpPreambleTests`、`NipX509Tests`、`AcmeAgent01Tests`。
+  总数：112 tests 全绿（alpha.3 时 87）。
+
+### 变更
+
+- Maven 坐标 `com.labacacia.nps:nps-java:1.0.0-alpha.4`。
+- `nip.IdentFrame` 在原有 v1 Ed25519 字段旁新增可选 `cert_format`
+  判别器 + `x509_chain` 字段。alpha.3 写出的 v1 IdentFrame 仍可
+  被 alpha.4 验签。
+
+### 套件级 alpha.4 要点
+
+- **NPS-RFC-0002 X.509 + ACME** —— 完整跨 SDK 端口波（.NET / Java /
+  Python / TypeScript / Go / Rust）。服务端可签发 dual-trust
+  IdentFrame（v1 Ed25519 + X.509 leaf 链回自签 root），NID 可通过
+  ACME `agent-01` 自助上线。
+- **NPS-CR-0002 —— Anchor Node topology 查询** ——
+  `topology.snapshot` / `topology.stream` 查询类型（.NET 参考 + L2
+  conformance）。Java 消费侧 helper 后续版本跟进。
+- **`nps-registry` SQLite 实仓** + **`nps-ledger` Phase 2**
+  （RFC 9162 Merkle + STH + inclusion proof）已在 daemon 仓库交付。
+
+---
+
 ## [1.0.0-alpha.3] —— 2026-04-25
 
 ### Changed
@@ -46,6 +97,7 @@
 
 作为 NPS 套件 `v1.0.0-alpha.1` 的一部分首次公开 alpha。
 
+[1.0.0-alpha.4]: https://gitee.com/labacacia/NPS-sdk-java/releases/tag/v1.0.0-alpha.4
 [1.0.0-alpha.3]: https://github.com/LabAcacia/NPS-Dev/releases/tag/v1.0.0-alpha.3
 [1.0.0-alpha.2]: https://github.com/LabAcacia/NPS-Dev/releases/tag/v1.0.0-alpha.2
 [1.0.0-alpha.1]: https://github.com/LabAcacia/NPS-Dev/releases/tag/v1.0.0-alpha.1

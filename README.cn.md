@@ -8,9 +8,9 @@
 
 ## 状态
 
-**v1.0.0-alpha.3 — Phase 1 / Phase 2 同步 alpha 发布**
+**v1.0.0-alpha.4 —— RFC-0002 跨 SDK 端口波（首棒语言）**
 
-覆盖 NCP + NWP + NIP + NDP + NOP 五个协议。
+覆盖 NCP + NWP + NIP + NDP + NOP 五个协议，加完整 **NPS-RFC-0002** X.509 + ACME `agent-01` NID 证书原语（`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`）。
 
 ## 环境要求
 
@@ -20,6 +20,8 @@
   - `org.msgpack:msgpack-core:0.9.8`
   - `com.fasterxml.jackson.core:jackson-databind:2.17.2`
   - `org.slf4j:slf4j-api:2.0.13`
+  - `org.bouncycastle:bcprov-jdk18on:1.79` *（RFC-0002，仅用 X.509 builder API）*
+  - `org.bouncycastle:bcpkix-jdk18on:1.79` *（RFC-0002，仅用 X.509 builder API）*
 
 ## 构建
 
@@ -38,7 +40,9 @@
 | `com.labacacia.nps.core` | 帧头、编解码器（Tier-1 JSON / Tier-2 MsgPack）、帧注册表、anchor 缓存、异常 |
 | `com.labacacia.nps.ncp`  | NCP 帧：`AnchorFrame`、`DiffFrame`、`StreamFrame`、`CapsFrame`、`HelloFrame`、`ErrorFrame` |
 | `com.labacacia.nps.nwp`  | NWP 帧：`QueryFrame`、`ActionFrame`、`AsyncActionResponse`；`NwpClient`（HTTP） |
-| `com.labacacia.nps.nip`  | NIP 帧：`IdentFrame`、`TrustFrame`、`RevokeFrame`；`NipIdentity`（Ed25519 密钥管理） |
+| `com.labacacia.nps.nip`         | NIP 帧：`IdentFrame`、`TrustFrame`、`RevokeFrame`；`NipIdentity`（Ed25519 密钥管理）；`NipIdentVerifier`（RFC-0002 §8.1 双信任）；`AssuranceLevel`（RFC-0003） |
+| `com.labacacia.nps.nip.x509`    | RFC-0002 X.509 NID 证书：`NipX509Builder` / `NipX509Verifier` / `Ed25519PublicKeys` / `NpsX509Oids` |
+| `com.labacacia.nps.nip.acme`    | RFC-0002 ACME `agent-01`：`AcmeClient` / `AcmeServer`（进程内） / `AcmeJws` / `AcmeMessages` |
 | `com.labacacia.nps.ndp`  | NDP 帧：`AnnounceFrame`、`ResolveFrame`、`GraphFrame`；`InMemoryNdpRegistry`；`NdpAnnounceValidator` |
 | `com.labacacia.nps.nop`  | NOP 帧：`TaskFrame`、`DelegateFrame`、`SyncFrame`、`AlignStreamFrame`；`BackoffStrategy`；`NopTaskStatus` |
 
@@ -237,7 +241,7 @@ var retrieved = cache.get("sha256:...");
 
 ## 测试
 
-5 个协议共 87 个测试，运行：
+5 个协议 + RFC-0002 共 98 个测试，运行：
 
 ```bash
 ./gradlew test
@@ -246,9 +250,11 @@ var retrieved = cache.get("sha256:...");
 测试类：
 - `AnchorFrameCacheTest` — 12
 - `FrameHeaderTest` — 8
-- `NpsFrameCodecTest` — 11
+- `NpsFrameCodecTest` — 15
 - `NdpTest` — 25（帧、注册表、校验器、匹配）
 - `NipIdentityTest` — 13（密钥生成、签名/验签、持久化、帧）
+- `NipX509Tests` — 5（RFC-0002：builder + verifier 正路径 + 4 反路径）
+- `AcmeAgent01Tests` — 2（RFC-0002：完整 ACME round-trip + 篡改签名）
 - `NopTest` — 18（退避、帧、任务状态）
 
 ## 许可证
