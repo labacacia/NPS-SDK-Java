@@ -30,8 +30,14 @@ public enum AssuranceLevel {
         return this.rank >= required.rank;
     }
 
+    /**
+     * Parse a wire string.  {@code null} or {@code ""} → {@link #ANONYMOUS}
+     * (backward compat per NPS-RFC-0003 §5.1.1).  Any other unrecognised
+     * non-empty value throws — callers MUST surface it as
+     * {@code NIP-ASSURANCE-UNKNOWN}.
+     */
     public static AssuranceLevel fromWire(String wire) {
-        if (wire == null) return ANONYMOUS;
+        if (wire == null || wire.isEmpty()) return ANONYMOUS;
         for (AssuranceLevel a : values()) {
             if (a.wire.equals(wire)) return a;
         }

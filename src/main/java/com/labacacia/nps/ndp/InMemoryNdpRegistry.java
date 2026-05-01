@@ -59,6 +59,57 @@ public final class InMemoryNdpRegistry {
         return null;
     }
 
+    /**
+     * Resolves a target using a custom {@link DnsTxtLookup} as fallback.
+     *
+     * <ol>
+     *   <li>Try the in-memory registry first via {@link #resolve(String)}.</li>
+     *   <li>Extract the hostname from the {@code nwp://} target URL.</li>
+     *   <li>Look up {@code _nps-node.{host}} TXT records via {@code dnsLookup}.</li>
+     *   <li>Parse each TXT record; return the first valid one.</li>
+     *   <li>Return {@code null} if nothing is found.</li>
+     * </ol>
+     *
+     * @param target    the {@code nwp://} target URL
+     * @param dnsLookup DNS TXT resolver to use for fallback
+     * @return a {@link ResolveResult}, or {@code null} if unresolvable
+     */
+    public ResolveResult resolveViaDns(String target, DnsTxtLookup dnsLookup) {
+        // 1. Try registry first
+        ResolveResult r = resolve(target);
+        if (r != null) return r;
+
+        // 2. Extract host from the nwp:// target
+        String host = NpsDnsTxt.extractHost(target);
+        if (host == null) return null;
+
+        // 3. Look up _nps-node.{host} TXT records
+        List<String> records;
+        try {
+            records = dnsLookup.lookup(NpsDnsTxt.dnsLookupName(host));
+        } catch (Exception e) {
+            return null;
+        }
+
+        // 4. Parse each record; return first valid
+        for (String txt : records) {
+            ResolveResult result = NpsDnsTxt.parseNpsTxtRecord(txt, host);
+            if (result != null) return result;
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolves a target using the system DNS ({@link SystemDnsTxtLookup}) as fallback.
+     *
+     * @param target the {@code nwp://} target URL
+     * @return a {@link ResolveResult}, or {@code null} if unresolvable
+     */
+    public ResolveResult resolveViaDns(String target) {
+        return resolveViaDns(target, new SystemDnsTxtLookup());
+    }
+
     public List<AnnounceFrame> getAll() {
         long now = clock.getAsLong();
         List<AnnounceFrame> result = new ArrayList<>();

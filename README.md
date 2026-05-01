@@ -8,9 +8,15 @@ Package group: `com.labacacia.nps` | Java 21+ | Gradle 8+
 
 ## Status
 
-**v1.0.0-alpha.4 — RFC-0002 cross-SDK port (lead language)**
+**v1.0.0-alpha.5 — NWP error codes + NIP gossip error codes**
 
 Covers all five NPS protocols: NCP + NWP + NIP + NDP + NOP, plus full **NPS-RFC-0002** X.509 + ACME `agent-01` NID certificate primitives (`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`).
+
+**alpha.5 additions:**
+
+- `NwpErrorCodes` — new `com.labacacia.nps.nwp.NwpErrorCodes` class with 30 NWP wire error code constants.
+- `NipErrorCodes.REPUTATION_GOSSIP_FORK` / `.REPUTATION_GOSSIP_SIG_INVALID` — RFC-0004 Phase 3 gossip error codes.
+- `AssuranceLevel.fromWire("")` returns `ANONYMOUS` (spec §5.1.1 fix).
 
 ## Requirements
 
@@ -39,11 +45,11 @@ Covers all five NPS protocols: NCP + NWP + NIP + NDP + NOP, plus full **NPS-RFC-
 |---------|-------------|
 | `com.labacacia.nps.core` | Frame header, codec (Tier-1 JSON / Tier-2 MsgPack), frame registry, anchor cache, exceptions |
 | `com.labacacia.nps.ncp`  | NCP frames: `AnchorFrame`, `DiffFrame`, `StreamFrame`, `CapsFrame`, `HelloFrame`, `ErrorFrame` |
-| `com.labacacia.nps.nwp`  | NWP frames: `QueryFrame`, `ActionFrame`, `AsyncActionResponse`; `NwpClient` (HTTP) |
+| `com.labacacia.nps.nwp`  | NWP frames: `QueryFrame`, `ActionFrame`, `AsyncActionResponse`; `NwpClient` (HTTP); `NwpErrorCodes` |
 | `com.labacacia.nps.nip`         | NIP frames: `IdentFrame`, `TrustFrame`, `RevokeFrame`; `NipIdentity` (Ed25519 key management); `NipIdentVerifier` (RFC-0002 §8.1 dual-trust); `AssuranceLevel` (RFC-0003) |
 | `com.labacacia.nps.nip.x509`    | RFC-0002 X.509 NID certs: `NipX509Builder` / `NipX509Verifier` / `Ed25519PublicKeys` / `NpsX509Oids` |
 | `com.labacacia.nps.nip.acme`    | RFC-0002 ACME `agent-01`: `AcmeClient` / `AcmeServer` (in-process) / `AcmeJws` / `AcmeMessages` |
-| `com.labacacia.nps.ndp`  | NDP frames: `AnnounceFrame`, `ResolveFrame`, `GraphFrame`; `InMemoryNdpRegistry`; `NdpAnnounceValidator` |
+| `com.labacacia.nps.ndp`  | NDP frames: `AnnounceFrame`, `ResolveFrame`, `GraphFrame`; `InMemoryNdpRegistry`; `NdpAnnounceValidator`; `resolveViaDns` (DNS TXT fallback); `DnsTxtLookup`, `SystemDnsTxtLookup`, `NpsDnsTxt` |
 | `com.labacacia.nps.nop`  | NOP frames: `TaskFrame`, `DelegateFrame`, `SyncFrame`, `AlignStreamFrame`; `BackoffStrategy`; `NopTaskStatus` |
 
 ## Quick Start
@@ -241,7 +247,7 @@ All codec and registry errors throw `NpsCodecError` (unchecked). Network errors 
 
 ## Testing
 
-98 tests across all protocols + RFC-0002, run with:
+122 tests across all protocols + RFC-0002, run with:
 
 ```bash
 ./gradlew test
@@ -251,7 +257,7 @@ Test classes:
 - `AnchorFrameCacheTest` — 12 tests
 - `FrameHeaderTest` — 8 tests
 - `NpsFrameCodecTest` — 15 tests
-- `NdpTest` — 25 tests (frames, registry, validator, matching)
+- `NdpTest` — 35 tests (frames, registry, validator, matching, DNS TXT fallback)
 - `NipIdentityTest` — 13 tests (keygen, sign/verify, persist, frames)
 - `NipX509Tests` — 5 tests (RFC-0002: builder + verifier happy path + 4 negative paths)
 - `AcmeAgent01Tests` — 2 tests (RFC-0002: full ACME round-trip + tampered signature)
