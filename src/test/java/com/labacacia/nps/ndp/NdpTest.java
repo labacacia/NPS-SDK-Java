@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class NdpTest {
 
@@ -193,5 +194,99 @@ class NdpTest {
         assertFalse(r.isValid());
         assertEquals("CODE", r.errorCode());
         assertEquals("msg",  r.message());
+    }
+
+    // ── NpsDnsTxt.parseNpsTxtRecord ───────────────────────────────────────────
+
+    @Test void parseNpsTxtRecord_validFullRecord() {
+        var result = NpsDnsTxt.parseNpsTxtRecord(
+            "v=nps1 type=memory port=17434 nid=urn:nps:node:api.example.com:products fp=sha256:a3f9",
+            "api.example.com");
+        assertNotNull(result);
+        assertEquals("api.example.com", result.host());
+        assertEquals(17434, result.port());
+        assertEquals(NpsDnsTxt.DEFAULT_TTL, result.ttl());
+    }
+
+    @Test void parseNpsTxtRecord_missingV_returnsNull() {
+        assertNull(NpsDnsTxt.parseNpsTxtRecord(
+            "type=memory port=17433 nid=urn:nps:node:api.example.com:products",
+            "api.example.com"));
+    }
+
+    @Test void parseNpsTxtRecord_wrongV_returnsNull() {
+        assertNull(NpsDnsTxt.parseNpsTxtRecord(
+            "v=nps2 nid=urn:nps:node:api.example.com:products",
+            "api.example.com"));
+    }
+
+    @Test void parseNpsTxtRecord_missingNid_returnsNull() {
+        assertNull(NpsDnsTxt.parseNpsTxtRecord(
+            "v=nps1 type=memory port=17433",
+            "api.example.com"));
+    }
+
+    @Test void parseNpsTxtRecord_defaultPort() {
+        var result = NpsDnsTxt.parseNpsTxtRecord(
+            "v=nps1 nid=urn:nps:node:api.example.com:products",
+            "api.example.com");
+        assertNotNull(result);
+        assertEquals(17433, result.port());
+    }
+
+    // ── NpsDnsTxt.extractHost ─────────────────────────────────────────────────
+
+    @Test void extractHost_validUrl() {
+        assertEquals("api.example.com", NpsDnsTxt.extractHost("nwp://api.example.com/products"));
+    }
+
+    @Test void extractHost_invalidUrl_returnsNull() {
+        assertNull(NpsDnsTxt.extractHost("http://api.example.com/products"));
+        assertNull(NpsDnsTxt.extractHost(null));
+        assertNull(NpsDnsTxt.extractHost(""));
+        assertNull(NpsDnsTxt.extractHost("nwp://"));
+    }
+
+    // ── resolveViaDns ─────────────────────────────────────────────────────────
+
+    @Test void resolveViaDns_usesRegistryFirst() throws Exception {
+        var reg = new InMemoryNdpRegistry();
+        var id  = NipIdentity.generate();
+        reg.announce(makeAnnounce(id, 300));
+
+        DnsTxtLookup mockLookup = mock(DnsTxtLookup.class);
+        var result = reg.resolveViaDns("nwp://example.com/data", mockLookup);
+
+        assertNotNull(result);
+        assertEquals("example.com", result.host());
+        assertEquals(17433, result.port());
+        // DNS must NOT be called when registry hits
+        verify(mockLookup, never()).lookup(anyString());
+    }
+
+    @Test void resolveViaDns_fallbackToDns() throws Exception {
+        var reg = new InMemoryNdpRegistry(); // empty registry
+
+        DnsTxtLookup mockLookup = mock(DnsTxtLookup.class);
+        when(mockLookup.lookup("_nps-node.api.example.com"))
+            .thenReturn(List.of("v=nps1 nid=urn:nps:node:api.example.com:products port=17434"));
+
+        var result = reg.resolveViaDns("nwp://api.example.com/products", mockLookup);
+
+        assertNotNull(result);
+        assertEquals("api.example.com", result.host());
+        assertEquals(17434, result.port());
+        assertEquals(NpsDnsTxt.DEFAULT_TTL, result.ttl());
+        verify(mockLookup).lookup("_nps-node.api.example.com");
+    }
+
+    @Test void resolveViaDns_invalidTxt_returnsNull() throws Exception {
+        var reg = new InMemoryNdpRegistry();
+
+        DnsTxtLookup mockLookup = mock(DnsTxtLookup.class);
+        when(mockLookup.lookup("_nps-node.api.example.com"))
+            .thenReturn(List.of("v=nps2 nid=urn:nps:node:api.example.com:products"));
+
+        assertNull(reg.resolveViaDns("nwp://api.example.com/products", mockLookup));
     }
 }

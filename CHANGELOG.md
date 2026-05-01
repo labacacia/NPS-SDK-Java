@@ -8,6 +8,24 @@ Until NPS reaches v1.0 stable, every repository in the suite is synchronized to 
 
 ---
 
+## [1.0.0-alpha.5] — 2026-05-01
+
+### Added
+
+- **`NwpErrorCodes` class** — new `com.labacacia.nps.nwp.NwpErrorCodes` with all 30 NWP wire error codes (auth, query, action, task, subscribe, infrastructure, manifest, topology, reserved-type). Missing from previous releases.
+- **`NDP.resolveViaDns` — DNS TXT fallback resolution** — new `InMemoryNdpRegistry.resolveViaDns(target, dnsLookup?)` falls back to `_nps-node.{host}` TXT record lookup (NPS-4 §5) when no in-memory entry matches. New `DnsTxtLookup` functional interface, `SystemDnsTxtLookup` (JNDI `DnsContextFactory`), and `NpsDnsTxt` parse helpers. Tests: 112 → 122.
+
+### Changed
+
+- **`AssuranceLevel.fromWire("")` returns `ANONYMOUS`** — `if (wire == null)` changed to `if (wire == null || wire.isEmpty())` so `""` returns `ANONYMOUS` (spec §5.1.1 backward-compat fix).
+- **Version bump to `1.0.0-alpha.5`** — synchronized with NPS suite alpha.5 release.
+
+### Fixed
+
+- **`NipErrorCodes.REPUTATION_GOSSIP_FORK` / `REPUTATION_GOSSIP_SIG_INVALID`** — two new NIP reputation gossip error codes added (RFC-0004 Phase 3).
+
+---
+
 ## [1.0.0-alpha.4] — 2026-04-30
 
 ### Added
@@ -100,6 +118,7 @@ Until NPS reaches v1.0 stable, every repository in the suite is synchronized to 
 
 First public alpha as part of the NPS suite `v1.0.0-alpha.1` release.
 
+[1.0.0-alpha.5]: https://github.com/labacacia/NPS-sdk-java/releases/tag/v1.0.0-alpha.5
 [1.0.0-alpha.4]: https://github.com/labacacia/NPS-sdk-java/releases/tag/v1.0.0-alpha.4
 [1.0.0-alpha.3]: https://github.com/LabAcacia/NPS-Dev/releases/tag/v1.0.0-alpha.3
 [1.0.0-alpha.2]: https://github.com/LabAcacia/NPS-Dev/releases/tag/v1.0.0-alpha.2

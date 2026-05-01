@@ -8,9 +8,15 @@
 
 ## 状态
 
-**v1.0.0-alpha.4 —— RFC-0002 跨 SDK 端口波（首棒语言）**
+**v1.0.0-alpha.5 —— NWP 错误码 + NIP gossip 错误码**
 
 覆盖 NCP + NWP + NIP + NDP + NOP 五个协议，加完整 **NPS-RFC-0002** X.509 + ACME `agent-01` NID 证书原语（`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`）。
+
+**alpha.5 新增：**
+
+- `NwpErrorCodes` —— 新 `com.labacacia.nps.nwp.NwpErrorCodes` 类，包含 30 个 NWP wire 错误码常量。
+- `NipErrorCodes.REPUTATION_GOSSIP_FORK` / `.REPUTATION_GOSSIP_SIG_INVALID` —— RFC-0004 Phase 3 gossip 错误码。
+- `AssuranceLevel.fromWire("")` 改为返回 `ANONYMOUS`（spec §5.1.1 修复）。
 
 ## 环境要求
 
@@ -39,11 +45,11 @@
 |---------|------|
 | `com.labacacia.nps.core` | 帧头、编解码器（Tier-1 JSON / Tier-2 MsgPack）、帧注册表、anchor 缓存、异常 |
 | `com.labacacia.nps.ncp`  | NCP 帧：`AnchorFrame`、`DiffFrame`、`StreamFrame`、`CapsFrame`、`HelloFrame`、`ErrorFrame` |
-| `com.labacacia.nps.nwp`  | NWP 帧：`QueryFrame`、`ActionFrame`、`AsyncActionResponse`；`NwpClient`（HTTP） |
+| `com.labacacia.nps.nwp`  | NWP 帧：`QueryFrame`、`ActionFrame`、`AsyncActionResponse`；`NwpClient`（HTTP）；`NwpErrorCodes` |
 | `com.labacacia.nps.nip`         | NIP 帧：`IdentFrame`、`TrustFrame`、`RevokeFrame`；`NipIdentity`（Ed25519 密钥管理）；`NipIdentVerifier`（RFC-0002 §8.1 双信任）；`AssuranceLevel`（RFC-0003） |
 | `com.labacacia.nps.nip.x509`    | RFC-0002 X.509 NID 证书：`NipX509Builder` / `NipX509Verifier` / `Ed25519PublicKeys` / `NpsX509Oids` |
 | `com.labacacia.nps.nip.acme`    | RFC-0002 ACME `agent-01`：`AcmeClient` / `AcmeServer`（进程内） / `AcmeJws` / `AcmeMessages` |
-| `com.labacacia.nps.ndp`  | NDP 帧：`AnnounceFrame`、`ResolveFrame`、`GraphFrame`；`InMemoryNdpRegistry`；`NdpAnnounceValidator` |
+| `com.labacacia.nps.ndp`  | NDP 帧：`AnnounceFrame`、`ResolveFrame`、`GraphFrame`；`InMemoryNdpRegistry`；`NdpAnnounceValidator`；`resolveViaDns`（DNS TXT 回退）；`DnsTxtLookup`、`SystemDnsTxtLookup`、`NpsDnsTxt` |
 | `com.labacacia.nps.nop`  | NOP 帧：`TaskFrame`、`DelegateFrame`、`SyncFrame`、`AlignStreamFrame`；`BackoffStrategy`；`NopTaskStatus` |
 
 ## 快速开始
@@ -241,7 +247,7 @@ var retrieved = cache.get("sha256:...");
 
 ## 测试
 
-5 个协议 + RFC-0002 共 98 个测试，运行：
+5 个协议 + RFC-0002 共 122 个测试，运行：
 
 ```bash
 ./gradlew test
@@ -251,7 +257,7 @@ var retrieved = cache.get("sha256:...");
 - `AnchorFrameCacheTest` — 12
 - `FrameHeaderTest` — 8
 - `NpsFrameCodecTest` — 15
-- `NdpTest` — 25（帧、注册表、校验器、匹配）
+- `NdpTest` — 35（帧、注册表、校验器、匹配、DNS TXT 回退）
 - `NipIdentityTest` — 13（密钥生成、签名/验签、持久化、帧）
 - `NipX509Tests` — 5（RFC-0002：builder + verifier 正路径 + 4 反路径）
 - `AcmeAgent01Tests` — 2（RFC-0002：完整 ACME round-trip + 篡改签名）
