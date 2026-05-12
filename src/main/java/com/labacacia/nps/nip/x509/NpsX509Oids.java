@@ -7,14 +7,14 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 /**
  * OID constants for NPS X.509 certificates per NPS-RFC-0002 §4.
  * <p>
- * The {@code 1.3.6.1.4.1.65715} arc is the LabAcacia IANA-assigned Private
- * Enterprise Number (PEN 65715, NPS-CR-0004, 2026-05-08).
+ * The {@code 1.3.6.1.4.1.65715} arc is the LabAcacia IANA-assigned PEN
+ * (NPS-CR-0004, assigned 2026-05-08; see NPS-RFC-0002 §10 OQ-2).
  */
 public final class NpsX509Oids {
 
     private NpsX509Oids() {}
 
-    // ── LabAcacia IANA-assigned PEN arc (PEN 65715, NPS-CR-0004, 2026-05-08) ─
+    // ── LabAcacia IANA-assigned PEN arc (NPS-CR-0004) ────────────────────────
     public static final String LAB_ACACIA_PEN_ARC = "1.3.6.1.4.1.65715";
     public static final String EKU_ARC            = LAB_ACACIA_PEN_ARC + ".1";
     public static final String EXTENSION_ARC      = LAB_ACACIA_PEN_ARC + ".2";
@@ -30,6 +30,9 @@ public final class NpsX509Oids {
     // ── Custom extensions ────────────────────────────────────────────────────
     public static final ASN1ObjectIdentifier NID_ASSURANCE_LEVEL =
         new ASN1ObjectIdentifier(EXTENSION_ARC + ".1");
+    // Reserved per NPS-CR-0004; no consumer wired in yet.
+    public static final ASN1ObjectIdentifier ID_NPS_NODE_ROLES =
+        new ASN1ObjectIdentifier(EXTENSION_ARC + ".2");
 
     // ── Ed25519 algorithm OID per RFC 8410 ───────────────────────────────────
     public static final ASN1ObjectIdentifier ED25519 =
