@@ -7,16 +7,15 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 /**
  * OID constants for NPS X.509 certificates per NPS-RFC-0002 §4.
  * <p>
- * The {@code 1.3.6.1.4.1.99999} arc is provisional pending IANA Private
- * Enterprise Number assignment (RFC-0002 §10 OQ-2). All implementations
- * MUST update these constants when the official PEN is granted.
+ * The {@code 1.3.6.1.4.1.65715} arc is the LabAcacia IANA-assigned Private
+ * Enterprise Number (PEN 65715, NPS-CR-0004, 2026-05-08).
  */
 public final class NpsX509Oids {
 
     private NpsX509Oids() {}
 
-    // ── Provisional LabAcacia PEN arc ────────────────────────────────────────
-    public static final String LAB_ACACIA_PEN_ARC = "1.3.6.1.4.1.99999";
+    // ── LabAcacia IANA-assigned PEN arc (PEN 65715, NPS-CR-0004, 2026-05-08) ─
+    public static final String LAB_ACACIA_PEN_ARC = "1.3.6.1.4.1.65715";
     public static final String EKU_ARC            = LAB_ACACIA_PEN_ARC + ".1";
     public static final String EXTENSION_ARC      = LAB_ACACIA_PEN_ARC + ".2";
 
