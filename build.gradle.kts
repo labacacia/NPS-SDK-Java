@@ -4,6 +4,8 @@
 plugins {
     java
     `java-library`
+    `maven-publish`
+    signing
 }
 
 group   = "com.labacacia.nps"
@@ -12,6 +14,7 @@ version = "1.0.0-alpha.6"
 java {
     toolchain { languageVersion = JavaLanguageVersion.of(21) }
     withSourcesJar()
+    withJavadocJar()
 }
 
 repositories {
@@ -45,7 +48,59 @@ tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
 }
 
+tasks.withType<Javadoc>().configureEach {
+    (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet")
+}
+
 tasks.test {
     useJUnitPlatform()
     testLogging { events("passed", "skipped", "failed") }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
+            artifactId = "nps-java"
+
+            pom {
+                name.set("NPS Java SDK")
+                description.set("Java SDK for the Neural Protocol Suite (NPS): NCP, NWP, NIP, NDP, and NOP.")
+                url.set("https://github.com/labacacia/NPS-sdk-java")
+
+                licenses {
+                    license {
+                        name.set("Apache License, Version 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+
+                developers {
+                    developer {
+                        id.set("labacacia")
+                        name.set("LabAcacia / INNO LOTUS PTY LTD")
+                        email.set("oss@labacacia.com")
+                    }
+                }
+
+                scm {
+                    connection.set("scm:git:https://github.com/labacacia/NPS-sdk-java.git")
+                    developerConnection.set("scm:git:https://github.com/labacacia/NPS-sdk-java.git")
+                    url.set("https://github.com/labacacia/NPS-sdk-java")
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = "stagingDeploy"
+            url = layout.buildDirectory.dir("staging-deploy").get().asFile.toURI()
+        }
+    }
+}
+
+signing {
+    useGpgCmd()
+    sign(publishing.publications["mavenJava"])
 }
