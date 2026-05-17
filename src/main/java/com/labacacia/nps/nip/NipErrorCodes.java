@@ -35,6 +35,8 @@ public final class NipErrorCodes {
     // ── RFC-0004 (reputation log) ────────────────────────────────────────────
     public static final String REPUTATION_ENTRY_INVALID    = "NIP-REPUTATION-ENTRY-INVALID";
     public static final String REPUTATION_LOG_UNREACHABLE  = "NIP-REPUTATION-LOG-UNREACHABLE";
+    public static final String REPUTATION_GOSSIP_FORK        = "NIP-REPUTATION-GOSSIP-FORK";
+    public static final String REPUTATION_GOSSIP_SIG_INVALID = "NIP-REPUTATION-GOSSIP-SIG-INVALID";
 
     // ── RFC-0002 (X.509 + ACME) ──────────────────────────────────────────────
     public static final String CERT_FORMAT_INVALID       = "NIP-CERT-FORMAT-INVALID";

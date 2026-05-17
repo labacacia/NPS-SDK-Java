@@ -8,6 +8,20 @@ Until NPS reaches v1.0 stable, every repository in the suite is synchronized to 
 
 ---
 
+## [1.0.0-alpha.7] — 2026-05-17
+
+### Added
+
+- **`com.labacacia.nps.nip.reputation` package — `ReputationLogClient` (NPS-RFC-0004 Phase 2)**: Full HTTP client for the reputation-log operator API. `submit`, `query`, `getSTH`, `getProof`, `getGossipSTH`. `verifyInclusion` performs RFC 9162 §2.1.3.2 Merkle audit-path verification locally. Wire types: `ReputationLogEntry` (Builder pattern), `SignedTreeHead`, `InclusionProof`, `ObservationWindow`, `IncidentType` (8-value enum), `Severity` (5-value ordered enum). `ReputationLogException` carries `nipErrorCode` + `npsStatus`. `NipErrorCodes` gains `REPUTATION_GOSSIP_FORK` and `REPUTATION_GOSSIP_SIG_INVALID`. 30 regression tests.
+
+- **`com.labacacia.nps.nwp.AnchorNodeClient` (NPS-CR-0002)**: HTTP client for Anchor Node topology queries using Java 11 `HttpClient`. `getSnapshot` returns `TopologySnapshot`. `subscribe` returns an `Iterator<TopologyEvent>` backed by NDJSON streaming. Typed events via `TopologyEvent` sealed-ish hierarchy. `AnchorTopologyException` for protocol errors. **Bug fix**: `subscribe()` iterator `hasNext()` order corrected — `pending != null` checked before `done` to prevent spurious `NoSuchElementException` on `ResyncRequiredEvent`. 25 regression tests.
+
+### Tracking the suite
+
+This release tracks NPS suite `v1.0.0-alpha.7`.
+
+---
+
 ## [1.0.0-alpha.6] — 2026-05-14
 
 ### Changed
@@ -132,5 +146,6 @@ Until NPS reaches v1.0 stable, every repository in the suite is synchronized to 
 
 First public alpha as part of the NPS suite `v1.0.0-alpha.1` release.
 
+[1.0.0-alpha.7]: https://github.com/labacacia/NPS-sdk-java/releases/tag/v1.0.0-alpha.7
 [1.0.0-alpha.2]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.2
 [1.0.0-alpha.1]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.1
