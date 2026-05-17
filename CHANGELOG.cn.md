@@ -8,6 +8,20 @@
 
 ---
 
+## [1.0.0-alpha.7] —— 2026-05-17
+
+### 新增
+
+- **`com.labacacia.nps.nip.reputation` 包 — `ReputationLogClient`（NPS-RFC-0004 Phase 2）**：完整的声誉日志 operator HTTP 客户端。`submit`、`query`、`getSTH`、`getProof`、`getGossipSTH`。`verifyInclusion` 在本地执行 RFC 9162 §2.1.3.2 Merkle audit-path 验证。Wire 类型：`ReputationLogEntry`（Builder 模式）、`SignedTreeHead`、`InclusionProof`、`ObservationWindow`、`IncidentType`（8 值枚举）、`Severity`（5 级有序枚举）。`ReputationLogException` 携带 `nipErrorCode` + `npsStatus`。`NipErrorCodes` 新增 `REPUTATION_GOSSIP_FORK` 和 `REPUTATION_GOSSIP_SIG_INVALID`。30 条回归测试。
+
+- **`com.labacacia.nps.nwp.AnchorNodeClient`（NPS-CR-0002）**：使用 Java 11 `HttpClient` 的 Anchor Node 拓扑查询客户端。`getSnapshot` 返回 `TopologySnapshot`。`subscribe` 返回基于 NDJSON 流的 `Iterator<TopologyEvent>`。`AnchorTopologyException` 处理协议错误。**Bug 修复**：`subscribe()` 迭代器 `hasNext()` 检查顺序修正 —— `pending != null` 优先于 `done` 检查，防止 `ResyncRequiredEvent` 上的伪 `NoSuchElementException`。25 条回归测试。
+
+### 跟随套件
+
+本次跟随 NPS 套件 `v1.0.0-alpha.7`。
+
+---
+
 ## [1.0.0-alpha.6] —— 2026-05-14
 
 ### 变更
@@ -129,5 +143,6 @@
 
 作为 NPS 套件 `v1.0.0-alpha.1` 的一部分首次公开 alpha。
 
+[1.0.0-alpha.7]: https://github.com/labacacia/NPS-sdk-java/releases/tag/v1.0.0-alpha.7
 [1.0.0-alpha.2]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.2
 [1.0.0-alpha.1]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.1
