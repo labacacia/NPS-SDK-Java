@@ -233,8 +233,8 @@ public final class AnchorNodeClient {
 
             @Override
             public boolean hasNext() {
+                if (pending != null) return true; // buffered event takes priority (covers ResyncRequired with done=true)
                 if (done)    return false;
-                if (pending != null) return true;
                 advance();
                 return pending != null;
             }
