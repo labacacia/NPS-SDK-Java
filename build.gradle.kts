@@ -101,6 +101,9 @@ publishing {
 }
 
 signing {
-    useGpgCmd()
-    sign(publishing.publications["mavenJava"])
+    val signingEnabled = !project.hasProperty("signing.skip") && !System.getenv("SIGNING_SKIP").equals("true", ignoreCase = true)
+    if (signingEnabled) {
+        useGpgCmd()
+        sign(publishing.publications["mavenJava"])
+    }
 }
