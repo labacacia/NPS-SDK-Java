@@ -8,9 +8,9 @@ Package group: `com.labacacia.nps` | Java 21+ | Gradle 8+
 
 ## Status
 
-**v1.0.0-alpha.6 — RFC-0002 cross-SDK port (lead language)**
+**v1.0.0-alpha.7 — ReputationLogClient (RFC-0004 Ph2) · AnchorNodeClient test coverage**
 
-Covers all five NPS protocols: NCP + NWP + NIP + NDP + NOP, plus full **NPS-RFC-0002** X.509 + ACME `agent-01` NID certificate primitives (`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`).
+Covers all five NPS protocols: NCP + NWP + NIP + NDP + NOP, plus full **NPS-RFC-0002** X.509 + ACME `agent-01` NID certificate primitives (`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`). Alpha.7 adds `ReputationLogClient` (CT-style reputation log, RFC-0004 Phase 2) and 21 AnchorNodeClient tests.
 
 ## Requirements
 

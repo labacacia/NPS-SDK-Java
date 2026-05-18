@@ -8,9 +8,9 @@
 
 ## 状态
 
-**v1.0.0-alpha.6 —— RFC-0002 跨 SDK 端口波（首棒语言）**
+**v1.0.0-alpha.7 —— ReputationLogClient（RFC-0004 Ph2）· AnchorNodeClient 测试覆盖**
 
-覆盖 NCP + NWP + NIP + NDP + NOP 五个协议，加完整 **NPS-RFC-0002** X.509 + ACME `agent-01` NID 证书原语（`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`）。
+覆盖 NCP + NWP + NIP + NDP + NOP 五个协议，加完整 **NPS-RFC-0002** X.509 + ACME `agent-01` NID 证书原语（`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`）。Alpha.7 新增 `ReputationLogClient`（CT 风格信誉日志，RFC-0004 Phase 2）及 21 个 AnchorNodeClient 测试。
 
 ## 环境要求
 
