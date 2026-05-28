@@ -16,17 +16,31 @@ public final class ActionFrame implements NpsFrame {
     private final Boolean            async_;         // nullable
     private final String             idempotencyKey; // nullable
     private final Integer            timeoutMs;      // nullable
+    private final String             callbackUrl;    // nullable (serialized as "callback_url")
+    /** Priority hint: {@code "low"}, {@code "normal"}, or {@code "high"}. */
+    private final String             priority;       // nullable (serialized as "priority")
+    private final String             requestId;      // nullable (serialized as "request_id")
 
     public ActionFrame(String actionId, Map<String,Object> params, Boolean async_,
-                       String idempotencyKey, Integer timeoutMs) {
+                       String idempotencyKey, Integer timeoutMs,
+                       String callbackUrl, String priority, String requestId) {
         this.actionId       = actionId;
         this.params         = params;
         this.async_         = async_;
         this.idempotencyKey = idempotencyKey;
         this.timeoutMs      = timeoutMs;
+        this.callbackUrl    = callbackUrl;
+        this.priority       = priority;
+        this.requestId      = requestId;
     }
 
-    public ActionFrame(String actionId) { this(actionId, null, null, null, null); }
+    /** Convenience constructor — original 5-arg form (callbackUrl/priority/requestId = null). */
+    public ActionFrame(String actionId, Map<String,Object> params, Boolean async_,
+                       String idempotencyKey, Integer timeoutMs) {
+        this(actionId, params, async_, idempotencyKey, timeoutMs, null, null, null);
+    }
+
+    public ActionFrame(String actionId) { this(actionId, null, null, null, null, null, null, null); }
 
     @Override public FrameType    frameType()    { return FrameType.ACTION; }
     @Override public EncodingTier preferredTier() { return EncodingTier.MSGPACK; }
@@ -36,6 +50,9 @@ public final class ActionFrame implements NpsFrame {
     public Boolean async_()           { return async_; }
     public String idempotencyKey()    { return idempotencyKey; }
     public Integer timeoutMs()        { return timeoutMs; }
+    public String callbackUrl()       { return callbackUrl; }
+    public String priority()          { return priority; }
+    public String requestId()         { return requestId; }
 
     @Override
     public Map<String, Object> toDict() {
@@ -45,6 +62,9 @@ public final class ActionFrame implements NpsFrame {
         m.put("async",           async_ != null ? async_ : false);
         m.put("idempotency_key", idempotencyKey);
         m.put("timeout_ms",      timeoutMs);
+        m.put("callback_url",    callbackUrl);
+        m.put("priority",        priority);
+        m.put("request_id",      requestId);
         return m;
     }
 
@@ -56,7 +76,10 @@ public final class ActionFrame implements NpsFrame {
             (Map<String,Object>) d.get("params"),
             (Boolean) d.get("async"),
             (String) d.get("idempotency_key"),
-            tm instanceof Number n ? n.intValue() : null
+            tm instanceof Number n ? n.intValue() : null,
+            (String) d.get("callback_url"),
+            (String) d.get("priority"),
+            (String) d.get("request_id")
         );
     }
 }

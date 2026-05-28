@@ -8,6 +8,17 @@
 
 ---
 
+## [1.0.0-alpha.8] —— 2026-05-28
+
+### 跟随套件
+
+本次跟随 NPS 套件 `v1.0.0-alpha.8`。
+
+套件要点：RFC-0005 `ReputationPolicyEvaluator` 在 .NET SDK 落地；cgn_limit
+预执行校验；RFC-0002 与 RFC-0005 升为 Accepted 状态。
+
+---
+
 ## [1.0.0-alpha.7] —— 2026-05-17
 
 ### 新增
@@ -143,6 +154,7 @@
 
 作为 NPS 套件 `v1.0.0-alpha.1` 的一部分首次公开 alpha。
 
+[1.0.0-alpha.8]: https://github.com/labacacia/NPS-sdk-java/releases/tag/v1.0.0-alpha.8
 [1.0.0-alpha.7]: https://github.com/labacacia/NPS-sdk-java/releases/tag/v1.0.0-alpha.7
 [1.0.0-alpha.2]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.2
 [1.0.0-alpha.1]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.1

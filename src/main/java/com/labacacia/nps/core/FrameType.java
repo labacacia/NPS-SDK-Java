@@ -13,6 +13,7 @@ public enum FrameType {
     // NWP
     QUERY       (0x10),
     ACTION      (0x11),
+    SUBSCRIBE   (0x12),
     // NIP
     IDENT       (0x20),
     TRUST       (0x21),

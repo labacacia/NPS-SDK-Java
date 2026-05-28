@@ -9,7 +9,8 @@ public final class NwpFrameRegistrar {
     private NwpFrameRegistrar() {}
 
     public static void register(FrameRegistry r) {
-        r.register(FrameType.QUERY,  QueryFrame::fromDict);
-        r.register(FrameType.ACTION, ActionFrame::fromDict);
+        r.register(FrameType.QUERY,     QueryFrame::fromDict);
+        r.register(FrameType.ACTION,    ActionFrame::fromDict);
+        r.register(FrameType.SUBSCRIBE, SubscribeFrame::fromDict);
     }
 }

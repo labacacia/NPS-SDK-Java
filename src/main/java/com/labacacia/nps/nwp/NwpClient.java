@@ -7,7 +7,6 @@ import com.labacacia.nps.core.EncodingTier;
 import com.labacacia.nps.core.codec.NpsFrameCodec;
 import com.labacacia.nps.core.NpsFrame;
 import com.labacacia.nps.core.registry.FrameRegistry;
-import com.labacacia.nps.ncp.AnchorFrame;
 import com.labacacia.nps.ncp.CapsFrame;
 import com.labacacia.nps.ncp.NcpFrameRegistrar;
 import com.labacacia.nps.ncp.StreamFrame;
@@ -26,7 +25,10 @@ import java.util.Map;
  */
 public final class NwpClient {
 
-    private static final String CONTENT_TYPE = "application/x-nps-frame";
+    private static final String MIME_FRAME    = "application/nwp-frame";
+    private static final String MIME_CAPSULE  = "application/nwp-capsule";
+    private static final String MIME_MANIFEST = "application/nwp-manifest+json";
+    private static final String CONTENT_TYPE  = MIME_FRAME;
     private static final ObjectMapper MAPPER  = new ObjectMapper();
 
     private final String       baseUrl;
@@ -51,16 +53,6 @@ public final class NwpClient {
             NwpFrameRegistrar.register(reg);
         }
         this.codec = new NpsFrameCodec(reg);
-    }
-
-    // ── sendAnchor ────────────────────────────────────────────────────────────
-
-    public void sendAnchor(AnchorFrame frame) throws IOException, InterruptedException {
-        byte[] wire = codec.encode(frame, tier);
-        HttpResponse<Void> res = http.send(
-            post(baseUrl + "/anchor", wire),
-            HttpResponse.BodyHandlers.discarding());
-        checkOk(res.statusCode(), "/anchor");
     }
 
     // ── query ─────────────────────────────────────────────────────────────────
@@ -135,7 +127,66 @@ public final class NwpClient {
         return json;
     }
 
+    // ── fetchManifest ─────────────────────────────────────────────────────────
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> fetchManifest() throws IOException, InterruptedException {
+        HttpResponse<byte[]> res = http.send(
+            get(baseUrl + "/.nwm"),
+            HttpResponse.BodyHandlers.ofByteArray());
+        checkOk(res.statusCode(), "/.nwm");
+        return MAPPER.readValue(res.body(), Map.class);
+    }
+
+    // ── fetchSchema ───────────────────────────────────────────────────────────
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> fetchSchema() throws IOException, InterruptedException {
+        HttpResponse<byte[]> res = http.send(
+            get(baseUrl + "/.schema"),
+            HttpResponse.BodyHandlers.ofByteArray());
+        checkOk(res.statusCode(), "/.schema");
+        return MAPPER.readValue(res.body(), Map.class);
+    }
+
+    // ── listActions ───────────────────────────────────────────────────────────
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> listActions() throws IOException, InterruptedException {
+        HttpResponse<byte[]> res = http.send(
+            get(baseUrl + "/actions"),
+            HttpResponse.BodyHandlers.ofByteArray());
+        checkOk(res.statusCode(), "/actions");
+        return MAPPER.readValue(res.body(), Map.class);
+    }
+
+    // ── subscribe ─────────────────────────────────────────────────────────────
+
+    public Object subscribe(SubscribeFrame frame) throws IOException, InterruptedException {
+        byte[] wire = codec.encode(frame, tier);
+        HttpResponse<byte[]> res = http.send(
+            post(baseUrl + "/subscribe", wire),
+            HttpResponse.BodyHandlers.ofByteArray());
+        checkOk(res.statusCode(), "/subscribe");
+
+        String ct = res.headers().firstValue("content-type").orElse("");
+        if (ct.contains(CONTENT_TYPE)) {
+            return codec.decode(res.body());
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> json = MAPPER.readValue(res.body(), Map.class);
+        return json;
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private HttpRequest get(String url) {
+        return HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Accept", "application/json")
+            .GET()
+            .build();
+    }
 
     private HttpRequest post(String url, byte[] body) {
         return HttpRequest.newBuilder()
