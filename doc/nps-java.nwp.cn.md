@@ -2,7 +2,7 @@
 
 # `com.labacacia.nps.nwp` — 类与方法参考
 
-> 规范：[NPS-2 NWP v0.4](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-2-NWP.md)
+> 规范：[NPS-2 NWP v0.13](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-2-NWP.md)
 
 NWP 是面向 Agent 的 HTTP 层。本模块提供 `QueryFrame` +
 `ActionFrame` + 基于 `java.net.http.HttpClient` 的阻塞式 `NwpClient`。

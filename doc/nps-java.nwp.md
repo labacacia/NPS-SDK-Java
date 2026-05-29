@@ -2,7 +2,7 @@ English | [中文版](./nps-java.nwp.cn.md)
 
 # `com.labacacia.nps.nwp` — Class and Method Reference
 
-> Spec: [NPS-2 NWP v0.4](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-2-NWP.md)
+> Spec: [NPS-2 NWP v0.13](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-2-NWP.md)
 
 NWP is the agent-facing HTTP layer. This module provides `QueryFrame` +
 `ActionFrame` + a blocking `NwpClient` built on `java.net.http.HttpClient`.

@@ -2,7 +2,7 @@
 
 # `com.labacacia.nps.ncp` — 类与方法参考
 
-> 规范：[NPS-1 NCP v0.4](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-1-NCP.md)
+> 规范：[NPS-1 NCP v0.7](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-1-NCP.md)
 
 NCP 是线路与 schema 层。Java SDK 暴露五个核心帧 ——
 `AnchorFrame`、`DiffFrame`、`StreamFrame`、`CapsFrame`、

@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.labacacia.nps.nwp;
 
+import java.util.List;
 import java.util.Map;
 
-public record TopologyEvent(
-    String eventId,
-    String eventType,
+public record TopologyMember(
     String nodeId,
+    String nodeType,
     String anchorRef,
-    String timestamp,
-    Map<String, Object> payload
+    List<String> capabilities,
+    Map<String, Object> metadata
 ) {}

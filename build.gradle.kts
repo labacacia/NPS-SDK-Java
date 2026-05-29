@@ -9,7 +9,7 @@ plugins {
 }
 
 group   = "com.labacacia.nps"
-version = "1.0.0-alpha.8"
+version = "1.0.0-alpha.11"
 
 java {
     toolchain { languageVersion = JavaLanguageVersion.of(21) }
@@ -101,9 +101,6 @@ publishing {
 }
 
 signing {
-    val signingEnabled = !project.hasProperty("signing.skip") && !System.getenv("SIGNING_SKIP").equals("true", ignoreCase = true)
-    if (signingEnabled) {
-        useGpgCmd()
-        sign(publishing.publications["mavenJava"])
-    }
+    useGpgCmd()
+    sign(publishing.publications["mavenJava"])
 }

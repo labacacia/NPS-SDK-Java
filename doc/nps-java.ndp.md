@@ -2,7 +2,7 @@ English | [中文版](./nps-java.ndp.cn.md)
 
 # `com.labacacia.nps.ndp` — Class and Method Reference
 
-> Spec: [NPS-4 NDP v0.2](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-4-NDP.md)
+> Spec: [NPS-4 NDP v0.8](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-4-NDP.md)
 
 NDP is the discovery layer — the NPS analogue of DNS. This module
 provides the three NDP frame types, a thread-safe in-memory registry

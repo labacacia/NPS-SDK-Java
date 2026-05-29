@@ -2,7 +2,7 @@
 
 # `com.labacacia.nps.nip` — 类与方法参考
 
-> 规范：[NPS-3 NIP v0.2](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-3-NIP.md)
+> 规范：[NPS-3 NIP v0.9](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-3-NIP.md)
 
 NIP 是身份层。本模块提供三个 NIP 帧（0x20–0x22）以及使用
 Java 15+ 原生 `java.security` Ed25519 provider 的身份辅助类

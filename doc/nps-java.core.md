@@ -2,7 +2,7 @@ English | [中文版](./nps-java.core.cn.md)
 
 # `com.labacacia.nps.core` — Class and Method Reference
 
-> Spec: [NPS-1 NCP v0.4](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-1-NCP.md) §2–§4
+> Spec: [NPS-1 NCP v0.7](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-1-NCP.md) §2–§4
 
 The core package ships the wire primitives every protocol builds on:
 frame header, codec, tier implementations, frame registry, anchor cache,

@@ -2,7 +2,7 @@
 
 # `com.labacacia.nps.core` — 类与方法参考
 
-> 规范：[NPS-1 NCP v0.4](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-1-NCP.md) §2–§4
+> 规范：[NPS-1 NCP v0.7](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-1-NCP.md) §2–§4
 
 core 包提供所有协议构建所依赖的线路层原语：
 帧头、编解码器、tier 实现、帧注册表、锚点缓存，

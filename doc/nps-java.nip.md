@@ -2,7 +2,7 @@ English | [中文版](./nps-java.nip.cn.md)
 
 # `com.labacacia.nps.nip` — Class and Method Reference
 
-> Spec: [NPS-3 NIP v0.2](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-3-NIP.md)
+> Spec: [NPS-3 NIP v0.9](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-3-NIP.md)
 
 NIP is the identity layer. This module ships the three NIP frames
 (0x20–0x22) and an `Ed25519` identity helper (`NipIdentity`) that uses
