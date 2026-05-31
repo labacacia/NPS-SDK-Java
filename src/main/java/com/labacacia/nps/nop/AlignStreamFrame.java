@@ -20,11 +20,20 @@ public final class AlignStreamFrame implements NpsFrame {
     private final Map<String,Object> data;       // nullable
     private final Map<String,Object> error;      // nullable {"error_code", "message"}
     private final Integer            windowSize; // nullable
+    private final Long               ackSeq;     // nullable
+    private final Long               nakSeq;     // nullable
 
     public AlignStreamFrame(String streamId, String taskId, String subtaskId,
                             int seq, boolean isFinal, String senderNid,
                             Map<String,Object> data, Map<String,Object> error,
                             Integer windowSize) {
+        this(streamId, taskId, subtaskId, seq, isFinal, senderNid, data, error, windowSize, null, null);
+    }
+
+    public AlignStreamFrame(String streamId, String taskId, String subtaskId,
+                            int seq, boolean isFinal, String senderNid,
+                            Map<String,Object> data, Map<String,Object> error,
+                            Integer windowSize, Long ackSeq, Long nakSeq) {
         this.streamId   = streamId;
         this.taskId     = taskId;
         this.subtaskId  = subtaskId;
@@ -34,6 +43,8 @@ public final class AlignStreamFrame implements NpsFrame {
         this.data       = data;
         this.error      = error;
         this.windowSize = windowSize;
+        this.ackSeq     = ackSeq;
+        this.nakSeq     = nakSeq;
     }
 
     @Override public FrameType    frameType()    { return FrameType.ALIGN_STREAM; }
@@ -48,6 +59,8 @@ public final class AlignStreamFrame implements NpsFrame {
     public Map<String,Object> data()  { return data; }
     public Map<String,Object> error() { return error; }
     public Integer windowSize() { return windowSize; }
+    public Long ackSeq()       { return ackSeq; }
+    public Long nakSeq()       { return nakSeq; }
 
     /** Convenience: error code from error map. */
     public String errorCode() {
@@ -71,12 +84,14 @@ public final class AlignStreamFrame implements NpsFrame {
         m.put("data",        data);
         m.put("error",       error);
         m.put("window_size", windowSize);
+        m.put("ack_seq",     ackSeq);
+        m.put("nak_seq",     nakSeq);
         return m;
     }
 
     @SuppressWarnings("unchecked")
     public static AlignStreamFrame fromDict(Map<String, Object> d) {
-        Object ws = d.get("window_size");
+        Object ws = d.get("window_size"), ack = d.get("ack_seq"), nak = d.get("nak_seq");
         return new AlignStreamFrame(
             (String) d.get("stream_id"),
             (String) d.get("task_id"),
@@ -86,7 +101,9 @@ public final class AlignStreamFrame implements NpsFrame {
             (String) d.get("sender_nid"),
             (Map<String,Object>) d.get("data"),
             (Map<String,Object>) d.get("error"),
-            ws instanceof Number n ? n.intValue() : null
+            ws instanceof Number n ? n.intValue() : null,
+            ack instanceof Number n ? n.longValue() : null,
+            nak instanceof Number n ? n.longValue() : null
         );
     }
 }

@@ -9,47 +9,70 @@ import com.labacacia.nps.core.NpsFrame;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+/**
+ * NDP Graph frame (§5 format, alpha.11).
+ *
+ * <p>Replaces the previous seq/initial_sync/nodes/patch representation with a
+ * stable graph snapshot keyed by {@code graphId}.
+ */
 public final class GraphFrame implements NpsFrame {
 
-    private final int                       seq;
-    private final boolean                   initialSync;
-    private final List<Map<String,Object>>  nodes; // nullable
-    private final List<Map<String,Object>>  patch; // nullable
+    private final String               graphId;   // mandatory
+    private final List<GraphNode>      nodes;     // mandatory
+    private final List<GraphEdge>      edges;     // mandatory
+    private final int                  ttl;       // mandatory
+    private final Map<String,Object>   metadata;  // nullable
 
-    public GraphFrame(int seq, boolean initialSync,
-                      List<Map<String,Object>> nodes, List<Map<String,Object>> patch) {
-        this.seq         = seq;
-        this.initialSync = initialSync;
-        this.nodes       = nodes;
-        this.patch       = patch;
+    public GraphFrame(String graphId, List<GraphNode> nodes, List<GraphEdge> edges,
+                      int ttl, Map<String,Object> metadata) {
+        this.graphId  = graphId;
+        this.nodes    = nodes;
+        this.edges    = edges;
+        this.ttl      = ttl;
+        this.metadata = metadata;
     }
 
-    @Override public FrameType    frameType()    { return FrameType.GRAPH; }
+    public GraphFrame(String graphId, List<GraphNode> nodes, List<GraphEdge> edges, int ttl) {
+        this(graphId, nodes, edges, ttl, null);
+    }
+
+    @Override public FrameType    frameType()     { return FrameType.GRAPH; }
     @Override public EncodingTier preferredTier() { return EncodingTier.MSGPACK; }
 
-    public int    seq()         { return seq; }
-    public boolean initialSync(){ return initialSync; }
-    public List<Map<String,Object>> nodes() { return nodes; }
-    public List<Map<String,Object>> patch() { return patch; }
+    public String graphId()             { return graphId; }
+    public List<GraphNode> nodes()      { return nodes; }
+    public List<GraphEdge> edges()      { return edges; }
+    public int ttl()                    { return ttl; }
+    public Map<String,Object> metadata(){ return metadata; }
 
     @Override
     public Map<String, Object> toDict() {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("seq",          seq);
-        m.put("initial_sync", initialSync);
-        m.put("nodes",        nodes);
-        m.put("patch",        patch);
+        m.put("graph_id",  graphId);
+        m.put("nodes",     nodes  != null ? nodes.stream().map(GraphNode::toDict).collect(Collectors.toList()) : null);
+        m.put("edges",     edges  != null ? edges.stream().map(GraphEdge::toDict).collect(Collectors.toList()) : null);
+        m.put("ttl",       ttl);
+        m.put("metadata",  metadata);
         return m;
     }
 
     @SuppressWarnings("unchecked")
     public static GraphFrame fromDict(Map<String, Object> d) {
+        List<Map<String,Object>> rawNodes = (List<Map<String,Object>>) d.get("nodes");
+        List<Map<String,Object>> rawEdges = (List<Map<String,Object>>) d.get("edges");
+        List<GraphNode> nodes = rawNodes != null
+            ? rawNodes.stream().map(GraphNode::fromDict).collect(Collectors.toList()) : null;
+        List<GraphEdge> edges = rawEdges != null
+            ? rawEdges.stream().map(GraphEdge::fromDict).collect(Collectors.toList()) : null;
+        Object ttlRaw = d.get("ttl");
         return new GraphFrame(
-            ((Number) d.get("seq")).intValue(),
-            (Boolean) d.get("initial_sync"),
-            (List<Map<String,Object>>) d.get("nodes"),
-            (List<Map<String,Object>>) d.get("patch")
+            (String) d.get("graph_id"),
+            nodes,
+            edges,
+            ttlRaw instanceof Number n ? n.intValue() : 0,
+            (Map<String,Object>) d.get("metadata")
         );
     }
 }

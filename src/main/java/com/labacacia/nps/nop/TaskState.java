@@ -5,7 +5,8 @@ package com.labacacia.nps.nop;
 public enum TaskState {
     PENDING("pending"), PREFLIGHT("preflight"), RUNNING("running"),
     WAITING_SYNC("waiting_sync"), COMPLETED("completed"),
-    FAILED("failed"), CANCELLED("cancelled"), SKIPPED("skipped");
+    FAILED("failed"), CANCELLED("cancelled"), SKIPPED("skipped"),
+    COMPENSATING("compensating"), COMPENSATED("compensated");
 
     public final String value;
     TaskState(String value) { this.value = value; }

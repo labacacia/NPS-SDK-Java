@@ -13,55 +13,66 @@ public final class TaskFrame implements NpsFrame {
 
     private final String             taskId;
     private final Map<String,Object> dag;
-    private final Integer            timeoutMs;      // nullable
-    private final String             callbackUrl;    // nullable
-    private final Map<String,Object> context;        // nullable
-    private final String             priority;       // nullable
-    private final Integer            depth;          // nullable
+    private final Integer            timeoutMs;          // nullable
+    private final String             callbackUrl;        // nullable
+    private final Map<String,Object> context;            // nullable
+    private final String             priority;           // nullable
+    private final Integer            depth;              // nullable
+    private final String             compensationPolicy; // default "none"
 
     public TaskFrame(String taskId, Map<String,Object> dag, Integer timeoutMs,
                      String callbackUrl, Map<String,Object> context,
                      String priority, Integer depth) {
-        this.taskId      = taskId;
-        this.dag         = dag;
-        this.timeoutMs   = timeoutMs;
-        this.callbackUrl = callbackUrl;
-        this.context     = context;
-        this.priority    = priority;
-        this.depth       = depth;
+        this(taskId, dag, timeoutMs, callbackUrl, context, priority, depth, "none");
+    }
+
+    public TaskFrame(String taskId, Map<String,Object> dag, Integer timeoutMs,
+                     String callbackUrl, Map<String,Object> context,
+                     String priority, Integer depth, String compensationPolicy) {
+        this.taskId              = taskId;
+        this.dag                 = dag;
+        this.timeoutMs           = timeoutMs;
+        this.callbackUrl         = callbackUrl;
+        this.context             = context;
+        this.priority            = priority;
+        this.depth               = depth;
+        this.compensationPolicy  = compensationPolicy != null ? compensationPolicy : "none";
     }
 
     public TaskFrame(String taskId, Map<String,Object> dag) {
-        this(taskId, dag, null, null, null, null, null);
+        this(taskId, dag, null, null, null, null, null, "none");
     }
 
     @Override public FrameType    frameType()    { return FrameType.TASK; }
     @Override public EncodingTier preferredTier() { return EncodingTier.MSGPACK; }
 
-    public String taskId()           { return taskId; }
-    public Map<String,Object> dag()  { return dag; }
-    public Integer timeoutMs()       { return timeoutMs; }
-    public String callbackUrl()      { return callbackUrl; }
-    public Map<String,Object> context() { return context; }
-    public String priority()         { return priority; }
-    public Integer depth()           { return depth; }
+    public String taskId()               { return taskId; }
+    public Map<String,Object> dag()      { return dag; }
+    public Integer timeoutMs()           { return timeoutMs; }
+    public String callbackUrl()          { return callbackUrl; }
+    public Map<String,Object> context()  { return context; }
+    public String priority()             { return priority; }
+    public Integer depth()               { return depth; }
+    public String compensationPolicy()   { return compensationPolicy; }
 
     @Override
     public Map<String, Object> toDict() {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("task_id",      taskId);
-        m.put("dag",          dag);
-        m.put("timeout_ms",   timeoutMs);
-        m.put("callback_url", callbackUrl);
-        m.put("context",      context);
-        m.put("priority",     priority);
-        m.put("depth",        depth);
+        m.put("task_id",             taskId);
+        m.put("dag",                 dag);
+        m.put("timeout_ms",          timeoutMs);
+        m.put("callback_url",        callbackUrl);
+        m.put("context",             context);
+        m.put("priority",            priority);
+        m.put("depth",               depth);
+        m.put("compensation_policy", compensationPolicy);
         return m;
     }
 
     @SuppressWarnings("unchecked")
     public static TaskFrame fromDict(Map<String, Object> d) {
         Object tm = d.get("timeout_ms"), dep = d.get("depth");
+        String cp = d.get("compensation_policy") instanceof String s ? s : "none";
         return new TaskFrame(
             (String) d.get("task_id"),
             (Map<String,Object>) d.get("dag"),
@@ -69,7 +80,8 @@ public final class TaskFrame implements NpsFrame {
             (String) d.get("callback_url"),
             (Map<String,Object>) d.get("context"),
             (String) d.get("priority"),
-            dep instanceof Number n ? n.intValue() : null
+            dep instanceof Number n ? n.intValue() : null,
+            cp
         );
     }
 }

@@ -3,14 +3,23 @@
 package com.labacacia.nps.ndp;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongSupplier;
 
 /** Thread-safe in-memory NDP node registry with TTL eviction. */
 public final class InMemoryNdpRegistry {
+
+    private static final int EPHEMERAL_TTL_CAP_S = 60;
+
+    /** RFC-1918 + loopback prefixes used by the {@code org-private} security profile. */
+    private static final Set<String> PRIVATE_PREFIXES = Set.of(
+        "10.", "172.16.", "172.17.", "172.18.", "172.19.", "172.20.", "172.21.",
+        "172.22.", "172.23.", "172.24.", "172.25.", "172.26.", "172.27.", "172.28.",
+        "172.29.", "172.30.", "172.31.", "192.168.", "127.", "::1", "fc", "fd"
+    );
 
     private record Entry(AnnounceFrame frame, long expiresAtMs) {}
 
@@ -19,12 +28,52 @@ public final class InMemoryNdpRegistry {
     /** Replaceable clock for testing (epoch-millis). */
     public LongSupplier clock = System::currentTimeMillis;
 
+    /**
+     * Active security profile — controls IP enforcement and TTL caps.
+     * Defaults to {@link SecurityProfile#LOCAL_DEV}.
+     */
+    public String securityProfile = SecurityProfile.LOCAL_DEV;
+
+    /**
+     * Validates an {@link AnnounceFrame} against the active {@link #securityProfile}.
+     *
+     * <ul>
+     *   <li>{@code local-dev} — always passes.</li>
+     *   <li>{@code org-private} — all announced addresses must resolve to RFC-1918 or
+     *       loopback ranges.</li>
+     *   <li>{@code public-federated} — no IP restriction (addresses are assumed publicly
+     *       routable by the caller).</li>
+     * </ul>
+     *
+     * @param frame the frame to validate
+     * @throws IllegalArgumentException if the frame violates the active profile
+     */
+    public void checkSecurityProfile(AnnounceFrame frame) {
+        if (SecurityProfile.ORG_PRIVATE.equals(securityProfile)) {
+            for (Map<String,Object> addr : frame.addresses()) {
+                String host = (String) addr.get("host");
+                if (host == null) continue;
+                boolean isPrivate = PRIVATE_PREFIXES.stream().anyMatch(host::startsWith);
+                if (!isPrivate) {
+                    throw new IllegalArgumentException(
+                        "Security profile '" + securityProfile +
+                        "' requires RFC-1918/loopback addresses, but got: " + host);
+                }
+            }
+        }
+    }
+
     public void announce(AnnounceFrame frame) {
         if (frame.ttl() == 0) {
             store.remove(frame.nid());
             return;
         }
-        long expiresAt = clock.getAsLong() + (long) frame.ttl() * 1000L;
+        int effectiveTtl = frame.ttl();
+        if (SecurityProfile.ORG_PRIVATE.equals(securityProfile) &&
+                effectiveTtl > EPHEMERAL_TTL_CAP_S) {
+            effectiveTtl = EPHEMERAL_TTL_CAP_S;
+        }
+        long expiresAt = clock.getAsLong() + (long) effectiveTtl * 1000L;
         store.put(frame.nid(), new Entry(frame, expiresAt));
     }
 

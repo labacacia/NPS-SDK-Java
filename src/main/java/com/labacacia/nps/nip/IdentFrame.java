@@ -24,9 +24,12 @@ public final class IdentFrame implements NpsFrame {
     private final String              certFormat;   // null ≡ "v1-proprietary"
     private final List<String>        certChain;    // base64url(DER), [leaf, intermediates..., root]
 
+    // alpha.11: optional OCSP staple (base64-encoded DER).
+    private final String              ocspStaple;   // nullable
+
     /** Backward-compatible constructor — produces a v1-proprietary frame with no assurance level. */
     public IdentFrame(String nid, String pubKey, Map<String,Object> metadata, String signature) {
-        this(nid, pubKey, metadata, signature, null, null, null);
+        this(nid, pubKey, metadata, signature, null, null, null, null);
     }
 
     /** Full constructor including RFC-0003 assurance level + RFC-0002 cert chain. */
@@ -38,6 +41,19 @@ public final class IdentFrame implements NpsFrame {
             AssuranceLevel      assuranceLevel,
             String              certFormat,
             List<String>        certChain) {
+        this(nid, pubKey, metadata, signature, assuranceLevel, certFormat, certChain, null);
+    }
+
+    /** Full constructor including alpha.11 OCSP staple. */
+    public IdentFrame(
+            String              nid,
+            String              pubKey,
+            Map<String,Object>  metadata,
+            String              signature,
+            AssuranceLevel      assuranceLevel,
+            String              certFormat,
+            List<String>        certChain,
+            String              ocspStaple) {
         this.nid             = nid;
         this.pubKey          = pubKey;
         this.metadata        = metadata;
@@ -45,6 +61,7 @@ public final class IdentFrame implements NpsFrame {
         this.assuranceLevel  = assuranceLevel;
         this.certFormat      = certFormat;
         this.certChain       = certChain;
+        this.ocspStaple      = ocspStaple;
     }
 
     @Override public FrameType    frameType()    { return FrameType.IDENT; }
@@ -57,6 +74,7 @@ public final class IdentFrame implements NpsFrame {
     public AssuranceLevel      assuranceLevel()  { return assuranceLevel; }
     public String              certFormat()      { return certFormat; }
     public List<String>        certChain()       { return certChain; }
+    public String              ocspStaple()      { return ocspStaple; }
 
     public Map<String, Object> unsignedDict() {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -73,8 +91,9 @@ public final class IdentFrame implements NpsFrame {
     public Map<String, Object> toDict() {
         Map<String, Object> m = new LinkedHashMap<>(unsignedDict());
         m.put("signature", signature);
-        if (certFormat != null) m.put("cert_format", certFormat);
-        if (certChain  != null) m.put("cert_chain",  certChain);
+        if (certFormat  != null) m.put("cert_format",  certFormat);
+        if (certChain   != null) m.put("cert_chain",   certChain);
+        if (ocspStaple  != null) m.put("ocsp_staple",  ocspStaple);
         return m;
     }
 
@@ -94,7 +113,8 @@ public final class IdentFrame implements NpsFrame {
             (String) d.get("signature"),
             level,
             (String) d.get("cert_format"),
-            certChain
+            certChain,
+            (String) d.get("ocsp_staple")
         );
     }
 }
