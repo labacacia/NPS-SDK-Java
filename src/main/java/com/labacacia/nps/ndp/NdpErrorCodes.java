@@ -43,6 +43,10 @@ public interface NdpErrorCodes {
     // ── Registry ──────────────────────────────────────────────────────────────
     String NDP_REGISTRY_UNAVAILABLE = "NDP-REGISTRY-UNAVAILABLE";
 
+    // ── Heartbeat (v0.9) ──────────────────────────────────────────────────────
+    /** Announce not received within heartbeat_interval_ms × 3 dead-peer threshold (NDP v0.9). */
+    String NDP_ANNOUNCE_STALE       = "NDP-ANNOUNCE-STALE";
+
     // ── NDP error → NPS status mapping ───────────────────────────────────────
 
     /**
@@ -64,6 +68,7 @@ public interface NdpErrorCodes {
         Map.entry(NDP_FEDERATION_LOOP,            NpsStatusCodes.NPS_CLIENT_CONFLICT),
         Map.entry(NDP_ISSUER_NOT_ALLOWED,         NpsStatusCodes.NPS_AUTH_FORBIDDEN),
         Map.entry(NDP_CA_ATTEST_REQUIRED,         NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
-        Map.entry(NDP_REGISTRY_UNAVAILABLE,       NpsStatusCodes.NPS_SERVER_UNAVAILABLE)
+        Map.entry(NDP_REGISTRY_UNAVAILABLE,       NpsStatusCodes.NPS_SERVER_UNAVAILABLE),
+        Map.entry(NDP_ANNOUNCE_STALE,             NpsStatusCodes.NPS_CLIENT_NOT_FOUND)
     );
 }

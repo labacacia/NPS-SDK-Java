@@ -45,8 +45,14 @@ public interface NopErrorCodes {
     String NOP_COMPENSATION_NOT_SUPPORTED = "NOP-COMPENSATION-NOT-SUPPORTED";
 
     // ── Webhook HMAC (NOP v0.6 roadmap) ──────────────────────────────────────
-    /** Webhook callback is missing the required HMAC signature header (NOP v0.6 roadmap). */
+    /** Webhook callback is missing the required HMAC signature header (NOP v0.6). */
     String NOP_CALLBACK_HMAC_MISSING = "NOP-CALLBACK-HMAC-MISSING";
+
+    // ── Result TTL / NAK (NOP v0.7) ──────────────────────────────────────────
+    /** Task result requested after result_ttl_seconds elapsed (NOP v0.7). */
+    String NOP_TASK_RESULT_EXPIRED      = "NOP-TASK-RESULT-EXPIRED";
+    /** NAK retransmission requested for a frame no longer in sender's buffer (NOP v0.7). */
+    String NOP_STREAM_NAK_UNRESOLVABLE  = "NOP-STREAM-NAK-UNRESOLVABLE";
 
     // ── NOP error → NPS status mapping ───────────────────────────────────────
 
@@ -75,6 +81,8 @@ public interface NopErrorCodes {
         Map.entry(NOP_INPUT_MAPPING_ERROR,      NpsStatusCodes.NPS_CLIENT_UNPROCESSABLE),
         Map.entry(NOP_COMPENSATION_FAILED,      NpsStatusCodes.NPS_CLIENT_UNPROCESSABLE),
         Map.entry(NOP_COMPENSATION_NOT_SUPPORTED, NpsStatusCodes.NPS_CLIENT_UNPROCESSABLE),
-        Map.entry(NOP_CALLBACK_HMAC_MISSING,    NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED)
+        Map.entry(NOP_CALLBACK_HMAC_MISSING,    NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
+        Map.entry(NOP_TASK_RESULT_EXPIRED,      NpsStatusCodes.NPS_CLIENT_NOT_FOUND),
+        Map.entry(NOP_STREAM_NAK_UNRESOLVABLE,  NpsStatusCodes.NPS_STREAM_SEQ_GAP)
     );
 }

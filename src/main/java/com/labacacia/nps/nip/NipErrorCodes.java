@@ -68,6 +68,9 @@ public interface NipErrorCodes {
     // ── OCSP staple (roadmap) ─────────────────────────────────────────────────
     String OCSP_STAPLE_EXPIRED       = "NIP-OCSP-STAPLE-EXPIRED";
 
+    // ── NIP v0.10 — node_roles ────────────────────────────────────────────────
+    String CERT_NODE_ROLES_MISMATCH  = "NIP-CERT-NODE-ROLES-MISMATCH";
+
     // ── NIP error → NPS status mapping ───────────────────────────────────────
 
     /**
@@ -112,6 +115,7 @@ public interface NipErrorCodes {
         Map.entry(CA_JWS_INVALID,                   NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
         Map.entry(CA_JWS_EXPIRED,                   NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
         Map.entry(CERT_PARENT_REVOKED,              NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
-        Map.entry(OCSP_STAPLE_EXPIRED,              NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED)
+        Map.entry(OCSP_STAPLE_EXPIRED,              NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
+        Map.entry(CERT_NODE_ROLES_MISMATCH,         NpsStatusCodes.NPS_AUTH_FORBIDDEN)
     );
 }

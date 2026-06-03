@@ -41,6 +41,10 @@ public interface NcpErrorCodes {
     String NCP_VERSION_INCOMPATIBLE = "NCP-VERSION-INCOMPATIBLE";
     String NCP_PREAMBLE_INVALID     = "NCP-PREAMBLE-INVALID";
 
+    // ── Keepalive (v0.8) ─────────────────────────────────────────────────────
+    String NCP_KEEPALIVE_TIMEOUT    = "NCP-KEEPALIVE-TIMEOUT";
+    String NCP_REKEY_REQUIRED       = "NCP-REKEY-REQUIRED";
+
     // ── NCP error → NPS status mapping ───────────────────────────────────────
 
     /**
@@ -63,6 +67,8 @@ public interface NcpErrorCodes {
         Map.entry(NCP_ENC_NOT_NEGOTIATED,        NpsStatusCodes.NPS_CLIENT_BAD_FRAME),
         Map.entry(NCP_ENC_AUTH_FAILED,           NpsStatusCodes.NPS_CLIENT_BAD_FRAME),
         Map.entry(NCP_VERSION_INCOMPATIBLE,      NpsStatusCodes.NPS_PROTO_VERSION_INCOMPATIBLE),
-        Map.entry(NCP_PREAMBLE_INVALID,          NpsStatusCodes.NPS_PROTO_PREAMBLE_INVALID)
+        Map.entry(NCP_PREAMBLE_INVALID,          NpsStatusCodes.NPS_PROTO_PREAMBLE_INVALID),
+        Map.entry(NCP_KEEPALIVE_TIMEOUT,         NpsStatusCodes.NPS_SERVER_TIMEOUT),
+        Map.entry(NCP_REKEY_REQUIRED,            NpsStatusCodes.NPS_CLIENT_BAD_FRAME)
     );
 }

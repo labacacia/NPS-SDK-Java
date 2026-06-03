@@ -10,6 +10,7 @@ public enum FrameType {
     STREAM      (0x03),
     CAPS        (0x04),
     HELLO       (0x06),
+    NOP         (0x07), // NCP v0.8 keepalive/heartbeat
     // NWP
     QUERY       (0x10),
     ACTION      (0x11),

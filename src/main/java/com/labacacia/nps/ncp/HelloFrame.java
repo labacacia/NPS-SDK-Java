@@ -33,6 +33,7 @@ public final class HelloFrame implements NpsFrame {
     private final boolean      extSupport;
     private final int          maxConcurrentStreams;
     private final List<String> e2eEncAlgorithms;      // nullable
+    private final int          pingIntervalMs;        // NCP v0.8; 0 = disabled
 
     public HelloFrame(String npsVersion,
                       List<String> supportedEncodings,
@@ -43,6 +44,21 @@ public final class HelloFrame implements NpsFrame {
                       boolean extSupport,
                       int maxConcurrentStreams,
                       List<String> e2eEncAlgorithms) {
+        this(npsVersion, supportedEncodings, supportedProtocols,
+             minVersion, agentId, maxFramePayload, extSupport,
+             maxConcurrentStreams, e2eEncAlgorithms, 0);
+    }
+
+    public HelloFrame(String npsVersion,
+                      List<String> supportedEncodings,
+                      List<String> supportedProtocols,
+                      String minVersion,
+                      String agentId,
+                      int maxFramePayload,
+                      boolean extSupport,
+                      int maxConcurrentStreams,
+                      List<String> e2eEncAlgorithms,
+                      int pingIntervalMs) {
         this.npsVersion           = npsVersion;
         this.supportedEncodings   = supportedEncodings;
         this.supportedProtocols   = supportedProtocols;
@@ -52,6 +68,7 @@ public final class HelloFrame implements NpsFrame {
         this.extSupport           = extSupport;
         this.maxConcurrentStreams = maxConcurrentStreams;
         this.e2eEncAlgorithms     = e2eEncAlgorithms;
+        this.pingIntervalMs       = pingIntervalMs;
     }
 
     public HelloFrame(String npsVersion,
@@ -75,6 +92,7 @@ public final class HelloFrame implements NpsFrame {
     public boolean      extSupport()            { return extSupport; }
     public int          maxConcurrentStreams()  { return maxConcurrentStreams; }
     public List<String> e2eEncAlgorithms()      { return e2eEncAlgorithms; }
+    public int          pingIntervalMs()        { return pingIntervalMs; }
 
     @Override
     public Map<String, Object> toDict() {
@@ -88,6 +106,7 @@ public final class HelloFrame implements NpsFrame {
         if (minVersion       != null) m.put("min_version",        minVersion);
         if (agentId          != null) m.put("agent_id",           agentId);
         if (e2eEncAlgorithms != null) m.put("e2e_enc_algorithms", e2eEncAlgorithms);
+        if (pingIntervalMs   >  0)    m.put("ping_interval_ms",   pingIntervalMs);
         return m;
     }
 
@@ -96,6 +115,7 @@ public final class HelloFrame implements NpsFrame {
         Object mfp = d.get("max_frame_payload");
         Object mcs = d.get("max_concurrent_streams");
         Object ext = d.get("ext_support");
+        Object pim = d.get("ping_interval_ms");
         return new HelloFrame(
             (String)       d.get("nps_version"),
             (List<String>) d.get("supported_encodings"),
@@ -105,7 +125,8 @@ public final class HelloFrame implements NpsFrame {
             mfp instanceof Number n ? n.intValue() : DEFAULT_MAX_FRAME_PAYLOAD,
             ext instanceof Boolean b && b,
             mcs instanceof Number n ? n.intValue() : DEFAULT_MAX_CONCURRENT_STREAMS,
-            (List<String>) d.get("e2e_enc_algorithms")
+            (List<String>) d.get("e2e_enc_algorithms"),
+            pim instanceof Number n ? n.intValue() : 0
         );
     }
 }

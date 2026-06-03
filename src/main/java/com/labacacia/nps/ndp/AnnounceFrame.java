@@ -18,18 +18,26 @@ public final class AnnounceFrame implements NpsFrame {
     private final int                ttl;
     private final String             timestamp;
     private final String             signature;
-    private final String             nodeType; // nullable
+    private final String             nodeType;            // nullable
+    private final int                heartbeatIntervalMs; // NDP v0.9; default 60000
 
     public AnnounceFrame(String nid, List<Map<String,Object>> addresses,
                          List<String> capabilities, int ttl, String timestamp,
                          String signature, String nodeType) {
-        this.nid          = nid;
-        this.addresses    = addresses;
-        this.capabilities = capabilities;
-        this.ttl          = ttl;
-        this.timestamp    = timestamp;
-        this.signature    = signature;
-        this.nodeType     = nodeType;
+        this(nid, addresses, capabilities, ttl, timestamp, signature, nodeType, 60_000);
+    }
+
+    public AnnounceFrame(String nid, List<Map<String,Object>> addresses,
+                         List<String> capabilities, int ttl, String timestamp,
+                         String signature, String nodeType, int heartbeatIntervalMs) {
+        this.nid                  = nid;
+        this.addresses            = addresses;
+        this.capabilities         = capabilities;
+        this.ttl                  = ttl;
+        this.timestamp            = timestamp;
+        this.signature            = signature;
+        this.nodeType             = nodeType;
+        this.heartbeatIntervalMs  = heartbeatIntervalMs;
     }
 
     @Override public FrameType    frameType()    { return FrameType.ANNOUNCE; }
@@ -42,6 +50,7 @@ public final class AnnounceFrame implements NpsFrame {
     public String timestamp()         { return timestamp; }
     public String signature()         { return signature; }
     public String nodeType()          { return nodeType; }
+    public int heartbeatIntervalMs()  { return heartbeatIntervalMs; }
 
     public Map<String, Object> unsignedDict() {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -58,11 +67,14 @@ public final class AnnounceFrame implements NpsFrame {
     public Map<String, Object> toDict() {
         Map<String, Object> m = new LinkedHashMap<>(unsignedDict());
         m.put("signature", signature);
+        m.put("heartbeat_interval_ms", heartbeatIntervalMs);
         return m;
     }
 
     @SuppressWarnings("unchecked")
     public static AnnounceFrame fromDict(Map<String, Object> d) {
+        Object hb = d.get("heartbeat_interval_ms");
+        int hbMs = hb instanceof Number n ? n.intValue() : 60_000;
         return new AnnounceFrame(
             (String) d.get("nid"),
             (List<Map<String,Object>>) d.get("addresses"),
@@ -70,7 +82,8 @@ public final class AnnounceFrame implements NpsFrame {
             ((Number) d.get("ttl")).intValue(),
             (String) d.get("timestamp"),
             (String) d.get("signature"),
-            (String) d.get("node_type")
+            (String) d.get("node_type"),
+            hbMs
         );
     }
 }
