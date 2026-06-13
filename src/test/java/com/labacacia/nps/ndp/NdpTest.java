@@ -67,12 +67,12 @@ class NdpTest {
     // ── GraphFrame ────────────────────────────────────────────────────────────
 
     @Test void graphFrameRoundtrip() {
-        var nodes = List.of(Map.<String,Object>of("nid", NID, "addresses", ADDRS));
-        var f     = new GraphFrame(1, true, nodes, null);
-        var back  = GraphFrame.fromDict(f.toDict());
-        assertEquals(1, back.seq());
-        assertTrue(back.initialSync());
-        assertNull(back.patch());
+        // GraphFrame was rewritten to the §5 topology-snapshot format
+        // (graph_id / nodes / edges / ttl).
+        var f    = new GraphFrame("g1", List.of(), List.of(), 300);
+        var back = GraphFrame.fromDict(f.toDict());
+        assertEquals("g1", back.graphId());
+        assertEquals(300, back.ttl());
     }
 
     // ── InMemoryNdpRegistry ───────────────────────────────────────────────────
