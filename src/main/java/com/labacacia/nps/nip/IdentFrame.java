@@ -27,7 +27,7 @@ public final class IdentFrame implements NpsFrame {
     // alpha.11: optional OCSP staple (base64-encoded DER).
     private final String              ocspStaple;   // nullable
 
-    // alpha.12: NIP v0.10 self-declared node-role tags.
+    // alpha.13: NIP v0.10 self-declared node-role tags.
     private final List<String>        nodeRoles;    // nullable
 
     /** Backward-compatible constructor — produces a v1-proprietary frame with no assurance level. */
@@ -60,7 +60,7 @@ public final class IdentFrame implements NpsFrame {
         this(nid, pubKey, metadata, signature, assuranceLevel, certFormat, certChain, ocspStaple, null);
     }
 
-    /** Full constructor including alpha.12 node_roles. */
+    /** Full constructor including alpha.13 node_roles. */
     public IdentFrame(
             String              nid,
             String              pubKey,

@@ -41,7 +41,7 @@ Gradle（Kotlin DSL）：
 
 ```kotlin
 dependencies {
-    implementation("com.labacacia.nps:nps-java:1.0.0-alpha.12")
+    implementation("com.labacacia.nps:nps-java:1.0.0-alpha.13")
 }
 ```
 
@@ -51,7 +51,7 @@ Maven：
 <dependency>
     <groupId>com.labacacia.nps</groupId>
     <artifactId>nps-java</artifactId>
-    <version>1.0.0-alpha.12</version>
+    <version>1.0.0-alpha.13</version>
 </dependency>
 ```
 
