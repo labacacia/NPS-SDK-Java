@@ -20,6 +20,10 @@ public final class AnnounceFrame implements NpsFrame {
     private final String             signature;
     private final String             nodeType;            // nullable
     private final int                heartbeatIntervalMs; // NDP v0.9; default 60000
+    // NDP v0.9 liveness — wire-only, EXCLUDED from the signed canonical form
+    // (last_seen updates every heartbeat → must not require re-signing; §3.2.1).
+    private final String             health;              // "healthy"/"degraded"/"draining"; nullable
+    private final String             lastSeen;            // ISO 8601 UTC liveness beat; nullable
 
     public AnnounceFrame(String nid, List<Map<String,Object>> addresses,
                          List<String> capabilities, int ttl, String timestamp,
@@ -30,6 +34,13 @@ public final class AnnounceFrame implements NpsFrame {
     public AnnounceFrame(String nid, List<Map<String,Object>> addresses,
                          List<String> capabilities, int ttl, String timestamp,
                          String signature, String nodeType, int heartbeatIntervalMs) {
+        this(nid, addresses, capabilities, ttl, timestamp, signature, nodeType, heartbeatIntervalMs, null, null);
+    }
+
+    public AnnounceFrame(String nid, List<Map<String,Object>> addresses,
+                         List<String> capabilities, int ttl, String timestamp,
+                         String signature, String nodeType, int heartbeatIntervalMs,
+                         String health, String lastSeen) {
         this.nid                  = nid;
         this.addresses            = addresses;
         this.capabilities         = capabilities;
@@ -38,6 +49,8 @@ public final class AnnounceFrame implements NpsFrame {
         this.signature            = signature;
         this.nodeType             = nodeType;
         this.heartbeatIntervalMs  = heartbeatIntervalMs;
+        this.health               = health;
+        this.lastSeen             = lastSeen;
     }
 
     @Override public FrameType    frameType()    { return FrameType.ANNOUNCE; }
@@ -51,6 +64,8 @@ public final class AnnounceFrame implements NpsFrame {
     public String signature()         { return signature; }
     public String nodeType()          { return nodeType; }
     public int heartbeatIntervalMs()  { return heartbeatIntervalMs; }
+    public String health()            { return health; }
+    public String lastSeen()          { return lastSeen; }
 
     public Map<String, Object> unsignedDict() {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -68,6 +83,9 @@ public final class AnnounceFrame implements NpsFrame {
         Map<String, Object> m = new LinkedHashMap<>(unsignedDict());
         m.put("signature", signature);
         m.put("heartbeat_interval_ms", heartbeatIntervalMs);
+        // Liveness fields live on the wire only (not in unsignedDict → not signed).
+        if (health != null)   m.put("health", health);
+        if (lastSeen != null) m.put("last_seen", lastSeen);
         return m;
     }
 
@@ -83,7 +101,9 @@ public final class AnnounceFrame implements NpsFrame {
             (String) d.get("timestamp"),
             (String) d.get("signature"),
             (String) d.get("node_type"),
-            hbMs
+            hbMs,
+            (String) d.get("health"),
+            (String) d.get("last_seen")
         );
     }
 }

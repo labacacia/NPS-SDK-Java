@@ -39,6 +39,20 @@ class NdpTest {
         assertNull(back.unsignedDict().get("signature"));
     }
 
+    @Test void announceLivenessWireOnly() {
+        // NDP v0.9 health/last_seen: on the wire, but NOT in the signed canonical form.
+        var f = new AnnounceFrame(NID, ADDRS, CAPS, 300, "t", "sig", null, 60_000,
+            "draining", "2026-06-13T00:00:00Z");
+        var d = f.toDict();
+        assertEquals("draining", d.get("health"));
+        assertEquals("2026-06-13T00:00:00Z", d.get("last_seen"));
+        assertNull(f.unsignedDict().get("health"));
+        assertNull(f.unsignedDict().get("last_seen"));
+        var back = AnnounceFrame.fromDict(d);
+        assertEquals("draining", back.health());
+        assertEquals("2026-06-13T00:00:00Z", back.lastSeen());
+    }
+
     @Test void announceFrameCodecRoundtrip() {
         var codec = new NpsFrameCodec(NpsRegistries.createFull());
         var id    = NipIdentity.generate();
