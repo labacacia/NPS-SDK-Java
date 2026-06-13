@@ -8,7 +8,7 @@
 
 ## 状态
 
-**v1.0.0-alpha.11 —— RFC-0002 跨 SDK 端口波（首棒语言）**
+**v1.0.0-alpha.12 —— RFC-0002 跨 SDK 端口波（首棒语言）**
 
 覆盖 NCP + NWP + NIP + NDP + NOP 五个协议，加完整 **NPS-RFC-0002** X.509 + ACME `agent-01` NID 证书原语（`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`）。
 
