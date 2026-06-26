@@ -1,6 +1,14 @@
 English | [中文版](./README.cn.md)
 
 # NPS Java SDK (`nps-java`)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.13-orange.svg)](CHANGELOG.md)
+[![Next](https://img.shields.io/badge/next-v1.0.0--alpha.14--candidate-yellow.svg)](CHANGELOG.md#100-alpha14--unreleased)
+[![NCP](https://img.shields.io/badge/NCP-v0.8-5b8cff.svg)]()
+[![NWP](https://img.shields.io/badge/NWP-v0.14-4af0b0.svg)]()
+[![NIP](https://img.shields.io/badge/NIP-v0.10-7b61ff.svg)]()
+[![NDP](https://img.shields.io/badge/NDP-v0.9-f0a050.svg)]()
+[![NOP](https://img.shields.io/badge/NOP-v0.7-ff8c42.svg)]()
 
 Java client library for the **Neural Protocol Suite (NPS)** — a complete internet protocol stack designed for AI agents and models.
 
@@ -11,6 +19,8 @@ Package group: `com.labacacia.nps` | Java 21+ | Gradle 8+
 **v1.0.0-alpha.13 — RFC-0002 cross-SDK port (lead language)**
 
 Covers all five NPS protocols: NCP + NWP + NIP + NDP + NOP, plus full **NPS-RFC-0002** X.509 + ACME `agent-01` NID certificate primitives (`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`).
+
+Alpha.14 candidate additions: typed remote NIP CA client (`NipCaClient`), native-mode NWP serving helper (`NwpNativeNodeServer`), and TC-N1/TC-N2 conformance manifest helpers (`com.labacacia.nps.conformance`).
 
 ## Requirements
 
@@ -39,12 +49,13 @@ Covers all five NPS protocols: NCP + NWP + NIP + NDP + NOP, plus full **NPS-RFC-
 |---------|-------------|
 | `com.labacacia.nps.core` | Frame header, codec (Tier-1 JSON / Tier-2 MsgPack), frame registry, anchor cache, exceptions |
 | `com.labacacia.nps.ncp`  | NCP frames: `AnchorFrame`, `DiffFrame`, `StreamFrame`, `CapsFrame`, `HelloFrame`, `ErrorFrame` |
-| `com.labacacia.nps.nwp`  | NWP frames: `QueryFrame`, `ActionFrame`, `AsyncActionResponse`; `NwpClient` (HTTP) |
+| `com.labacacia.nps.nwp`  | NWP frames: `QueryFrame`, `ActionFrame`, `AsyncActionResponse`; `NwpClient` (HTTP); `NwpNativeNodeServer` |
 | `com.labacacia.nps.nip`         | NIP frames: `IdentFrame`, `TrustFrame`, `RevokeFrame`; `NipIdentity` (Ed25519 key management); `NipIdentVerifier` (RFC-0002 §8.1 dual-trust); `AssuranceLevel` (RFC-0003) |
 | `com.labacacia.nps.nip.x509`    | RFC-0002 X.509 NID certs: `NipX509Builder` / `NipX509Verifier` / `Ed25519PublicKeys` / `NpsX509Oids` |
 | `com.labacacia.nps.nip.acme`    | RFC-0002 ACME `agent-01`: `AcmeClient` / `AcmeServer` (in-process) / `AcmeJws` / `AcmeMessages` |
 | `com.labacacia.nps.ndp`  | NDP frames: `AnnounceFrame`, `ResolveFrame`, `GraphFrame`; `InMemoryNdpRegistry`; `NdpAnnounceValidator` |
 | `com.labacacia.nps.nop`  | NOP frames: `TaskFrame`, `DelegateFrame`, `SyncFrame`, `AlignStreamFrame`; `BackoffStrategy`; `NopTaskStatus` |
+| `com.labacacia.nps.conformance` | TC-N1/TC-N2 conformance catalog, manifest builder, and validator |
 
 ## Quick Start
 
@@ -102,6 +113,23 @@ for (var sf : frames) {
 }
 ```
 
+### NWP Native Serving
+
+```java
+import com.labacacia.nps.ncp.CapsFrame;
+import com.labacacia.nps.nwp.NwpNativeNodeServer;
+import java.util.List;
+import java.util.Map;
+
+var server = new NwpNativeNodeServer(
+    query -> new CapsFrame("native:orders", 1, List.of(Map.<String, Object>of("id", 42))),
+    action -> Map.of("action", action.actionId())
+);
+
+// `input`/`output` are already past NCP preamble, TLS, and Hello negotiation.
+server.serve(input, output);
+```
+
 ### NIP Identity — Sign & Verify
 
 ```java
@@ -121,6 +149,45 @@ boolean ok  = identity.verify(payload, sig); // true
 // Persist and load (AES-256-GCM + PBKDF2)
 identity.save(Path.of("my-node.key"), "my-passphrase");
 var loaded = NipIdentity.load(Path.of("my-node.key"), "my-passphrase");
+```
+
+### NIP Remote CA Client
+
+```java
+import com.labacacia.nps.nip.NipCaClient;
+import com.labacacia.nps.nip.NipCaRegisterRequest;
+import java.util.List;
+
+var ca = new NipCaClient("https://ca.example.com", "/nip", null);
+var discovery = ca.getDiscovery();
+var ident = ca.registerAgent(
+    new NipCaRegisterRequest("agent-a", "ed25519:<pub>", List.of("nwp:query"), null, null),
+    "token"
+);
+var status = ca.verifyAgent(ident.nid);
+```
+
+### Conformance Manifest
+
+```java
+import com.labacacia.nps.conformance.NpsConformance;
+import com.labacacia.nps.conformance.NpsConformanceCaseResult;
+import com.labacacia.nps.conformance.NpsConformanceManifest;
+
+var results = NpsConformance.catalogForProfile(NpsConformance.NODE_L1).stream()
+    .map(c -> new NpsConformanceCaseResult(c.id(), "pass", null))
+    .toList();
+var manifest = NpsConformanceManifest.create(
+    NpsConformance.NODE_L1,
+    "my-node",
+    "1.0.0-alpha.14",
+    "urn:nps:node:example.com:my-node",
+    "labacacia-fixture",
+    "1.0.0-alpha.14",
+    results,
+    "ci"
+);
+var validation = NpsConformance.validate(manifest);
 ```
 
 ### NDP Registry — Announce & Resolve
@@ -259,4 +326,4 @@ Test classes:
 
 ## License
 
-[Apache 2.0](https://github.com/labacacia/NPS-Dev/blob/main/LICENSE) © 2026 INNO LOTUS PTY LTD
+[Apache 2.0](LICENSE) © 2026 INNO LOTUS PTY LTD

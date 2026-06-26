@@ -8,148 +8,13 @@
 
 ---
 
-## [1.0.0-alpha.13] —— 2026-06-03
+## [1.0.0-alpha.14] —— 未发布
 
-### 新增
+### Added
 
-- **NCP v0.8 — `NopFrame`（0x07）**：`FrameType.NOP`；新增 `NopFrame` 类；`HelloFrame.pingIntervalMs`（默认 `0`）；`NCP_KEEPALIVE_TIMEOUT` / `NCP_REKEY_REQUIRED` 错误码。
-- **NWP v0.14 — manifest 版本化**：`NwpHeaders.X_NWM_VERSION = "X-NWM-Version"` 常量。
-- **NIP v0.10 — `node_roles`**：`IdentFrame.nodeRoles`（`List<String>?`）；`CERT_NODE_ROLES_MISMATCH` 错误码。
-- **NDP v0.9 — 心跳**：`AnnounceFrame.heartbeatIntervalMs`（默认 `60000`）；`NDP_ANNOUNCE_STALE` 错误码。
-- **NOP v0.7 — 结果 TTL**：`TaskFrame.resultTtlSeconds`（默认 `3600`）；`NOP_TASK_RESULT_EXPIRED` / `NOP_STREAM_NAK_UNRESOLVABLE` 错误码。
-
-### 套件同步
-
-本版本跟进 NPS 套件 `v1.0.0-alpha.13`。NCP v0.8 / NWP v0.14 / NIP v0.10 / NDP v0.9 / NOP v0.7。
-
----
-
-## [1.0.0-alpha.8] —— 2026-05-28
-
-### 跟随套件
-
-本次跟随 NPS 套件 `v1.0.0-alpha.8`。
-
-套件要点：RFC-0005 `ReputationPolicyEvaluator` 在 .NET SDK 落地；cgn_limit
-预执行校验；RFC-0002 与 RFC-0005 升为 Accepted 状态。
-
----
-
-## [1.0.0-alpha.7] —— 2026-05-17
-
-### 新增
-
-- **`com.labacacia.nps.nip.reputation` 包 — `ReputationLogClient`（NPS-RFC-0004 Phase 2）**：完整的声誉日志 operator HTTP 客户端。`submit`、`query`、`getSTH`、`getProof`、`getGossipSTH`。`verifyInclusion` 在本地执行 RFC 9162 §2.1.3.2 Merkle audit-path 验证。Wire 类型：`ReputationLogEntry`（Builder 模式）、`SignedTreeHead`、`InclusionProof`、`ObservationWindow`、`IncidentType`（8 值枚举）、`Severity`（5 级有序枚举）。`ReputationLogException` 携带 `nipErrorCode` + `npsStatus`。`NipErrorCodes` 新增 `REPUTATION_GOSSIP_FORK` 和 `REPUTATION_GOSSIP_SIG_INVALID`。30 条回归测试。
-
-- **`com.labacacia.nps.nwp.AnchorNodeClient`（NPS-CR-0002）**：使用 Java 11 `HttpClient` 的 Anchor Node 拓扑查询客户端。`getSnapshot` 返回 `TopologySnapshot`。`subscribe` 返回基于 NDJSON 流的 `Iterator<TopologyEvent>`。`AnchorTopologyException` 处理协议错误。**Bug 修复**：`subscribe()` 迭代器 `hasNext()` 检查顺序修正 —— `pending != null` 优先于 `done` 检查，防止 `ResyncRequiredEvent` 上的伪 `NoSuchElementException`。25 条回归测试。
-
-### 跟随套件
-
-本次跟随 NPS 套件 `v1.0.0-alpha.7`。
-
----
-
-## [1.0.0-alpha.6] —— 2026-05-14
-
-### 变更
-
-- **`NpsX509Oids` — IANA PEN 65715（Breaking，CR-0004）**：`LAB_ACACIA_PEN_ARC` 从 `1.3.6.1.4.1.99999` 更新为 `1.3.6.1.4.1.65715`。新增 `ID_NPS_NODE_ROLES`（`EXTENSION_ARC + ".2"`），按 CR-0004 预留，暂无消费者。在临时弧下签发的证书必须吊销并重新签发。
-
-- **`NipErrorCodes` — 移除 `REPUTATION_GOSSIP_FORK` / `REPUTATION_GOSSIP_SIG_INVALID`**：这两个常量是提前加入的 Phase 3 条目，在 RFC-0004 Phase 3 完整规范落地前从 alpha.6 中移除。
-
-- **`AssuranceLevel.fromWire("")` 现在会抛出异常（Breaking）**：`fromWire` 现为严格模式——仅 `null` 返回 `ANONYMOUS`，空字符串 `""` 抛出 `IllegalArgumentException`。如需兼容空值，请使用 `fromWireOrAnonymous`。
-
-- **版本升级至 `1.0.0-alpha.6`** —— 与 NPS 套件 alpha.6 版本同步。
-
----
-
-## [1.0.0-alpha.5] —— 2026-05-01
-
-### 新增
-
-- **`NwpErrorCodes` 类** —— 新增 `com.labacacia.nps.nwp.NwpErrorCodes`，包含全部 30 个 NWP wire 错误码（auth、query、action、task、subscribe、infrastructure、manifest、topology、reserved-type）。此前版本均未提供。
-- **`NDP.resolveViaDns` —— DNS TXT 回退解析** —— 新增 `InMemoryNdpRegistry.resolveViaDns(target, dnsLookup?)`，当内存注册表无匹配时回退查询 `_nps-node.{host}` TXT 记录（NPS-4 §5）。新增 `DnsTxtLookup` 函数式接口、`SystemDnsTxtLookup`（JNDI `DnsContextFactory`）与 `NpsDnsTxt` 解析辅助类。测试数：112 → 122。
-
-### 变更
-
-- **`AssuranceLevel.fromWire("")` 返回 `ANONYMOUS`** —— `if (wire == null)` 改为 `if (wire == null || wire.isEmpty())`，使 `""` 返回 `ANONYMOUS`（spec §5.1.1 向后兼容修复）。
-- **版本升至 `1.0.0-alpha.5`** —— 与 NPS 套件 alpha.5 同步。
-
-### 修复
-
-- **`NipErrorCodes.REPUTATION_GOSSIP_FORK` / `REPUTATION_GOSSIP_SIG_INVALID`** —— 新增两个 NIP 声誉 gossip 错误码（RFC-0004 Phase 3）。
-
----
-
-## [1.0.0-alpha.4] —— 2026-04-30
-
-### 新增
-
-- **NPS-RFC-0001 Phase 2 —— NCP 连接前导（Java helper 跟进）。**
-  `com.labacacia.nps.ncp.NcpPreamble` 暴露
-  `writePreamble(OutputStream)` / `readPreamble(InputStream)`，往返
-  字面量 `b"NPS/1.0\n"` 哨兵；`NcpPreambleTests` 覆盖。让 Java SDK
-  与 .NET / Python / TypeScript / Go 在 alpha.4 的 preamble helper
-  持平。
-- **NPS-RFC-0002 Phase A/B —— X.509 NID 证书 + ACME `agent-01`
-  （Java 端口）。** 新增 `com.labacacia.nps.nip` 子包：
-  - `nip.x509` —— X.509 NID 证书 builder + verifier（基于 Bouncy
-    Castle）。
-  - `nip.acme` —— ACME `agent-01` 客户端 + 服务端参考实现（挑战
-    签发、key authorization、按 NPS-RFC-0002 Phase B 的 JWS 签名
-    wire 包络）。
-  - `nip.AssuranceLevel` —— Agent 身份保证等级
-    （`anonymous` / `attested` / `verified`），承接 NPS-RFC-0003。
-  - `nip.IdentCertFormat` —— IdentFrame 的 `cert_format` 判别器
-    （`v1` Ed25519 vs. `x509`）。
-  - `nip.NipErrorCodes` —— NIP 错误码命名空间。
-  - `nip.NipIdentVerifier` + `NipIdentVerifyResult` +
-    `NipVerifierOptions` —— dual-trust IdentFrame 验证器
-    （v1 + X.509）。
-  - `nip.NipCanonicalJson` —— canonical JSON 帮助类，给验证器和
-    X.509 builder 用。
-- 新增测试：`NcpPreambleTests`、`NipX509Tests`、`AcmeAgent01Tests`。
-  总数：112 tests 全绿（alpha.3 时 87）。
-
-### 变更
-
-- Maven 坐标 `com.labacacia.nps:nps-java:1.0.0-alpha.4`。
-- `nip.IdentFrame` 在原有 v1 Ed25519 字段旁新增可选 `cert_format`
-  判别器 + `x509_chain` 字段。alpha.3 写出的 v1 IdentFrame 仍可
-  被 alpha.4 验签。
-
-### 套件级 alpha.4 要点
-
-- **NPS-RFC-0002 X.509 + ACME** —— 完整跨 SDK 端口波（.NET / Java /
-  Python / TypeScript / Go / Rust）。服务端可签发 dual-trust
-  IdentFrame（v1 Ed25519 + X.509 leaf 链回自签 root），NID 可通过
-  ACME `agent-01` 自助上线。
-- **NPS-CR-0002 —— Anchor Node topology 查询** ——
-  `topology.snapshot` / `topology.stream` 查询类型（.NET 参考 + L2
-  conformance）。Java 消费侧 helper 后续版本跟进。
-- **`nps-registry` SQLite 实仓** + **`nps-ledger` Phase 2**
-  （RFC 9162 Merkle + STH + inclusion proof）已在 daemon 仓库交付。
-
----
-
-## [1.0.0-alpha.3] —— 2026-04-25
-
-### Changed
-
-- 版本升级至 `1.0.0-alpha.3`，与 NPS `v1.0.0-alpha.3` 套件同步。本次 Java SDK 无功能变更。
-- 87 tests 仍全绿。
-
-### 套件级 alpha.3 要点（各语言 helper 在 alpha.4 跟进）
-
-- **NPS-RFC-0001 —— NCP 连接前导**（Accepted）。原生模式连接现以字面量 `b"NPS/1.0\n"`（8 字节）开头。.NET SDK 已落地参考实现；Java helper 在 alpha.4 跟进。
-- **NPS-RFC-0003 —— Agent 身份保证等级**（Accepted）。NIP IdentFrame 与 NWM 新增三态 `assurance_level`（`anonymous`/`attested`/`verified`）。.NET 参考类型已落地；Java 同步在 alpha.4。
-- **NPS-RFC-0004 —— NID 声誉日志（CT 风格）**（Accepted）。append-only Merkle 日志条目结构发布；.NET 参考签名器已落地（并以 `nps-ledger` daemon Phase 1 形态发布）。Java helper 在 alpha.4 跟进。
-- **NPS-CR-0001 —— Anchor / Bridge 节点拆分。** 旧的 "Gateway Node" 角色更名为 **Anchor Node**；"NPS↔外部协议翻译" 单独成为 **Bridge Node** 类型。AnnounceFrame 新增 `node_kind` / `cluster_anchor` / `bridge_protocols`。源代码层面变更落在 `spec/` + .NET 参考实现。
-- **6 个 NPS 常驻 daemon。** NPS-Dev 新建 `daemons/` 目录，定义 `npsd` / `nps-runner` / `nps-gateway` / `nps-registry` / `nps-cloud-ca` / `nps-ledger`；其中 `npsd` 提供 L1 功能性参考实现，其余为 Phase 1 骨架。
-
-### 涵盖模块
-
-- com.labacacia.nps.{core,ncp,nwp,nip,ndp,nop}
+- `com.labacacia.nps.nip.NipCaClient`：远程 NIP CA 的类型化客户端，覆盖 discovery、CRL、agent/node 注册、X.509 注册、续签、撤销和校验。
+- `com.labacacia.nps.nwp.NwpNativeNodeServer`：native-mode NWP 服务端 helper，用于在已建立的 NCP stream 上分发 QueryFrame/ActionFrame。
+- `com.labacacia.nps.conformance`：TC-N1/TC-N2 一致性用例目录、manifest 构造器和校验器，用于 CI/自认证流程。
 
 ---
 
@@ -170,7 +35,5 @@
 
 作为 NPS 套件 `v1.0.0-alpha.1` 的一部分首次公开 alpha。
 
-[1.0.0-alpha.8]: https://github.com/labacacia/NPS-sdk-java/releases/tag/v1.0.0-alpha.8
-[1.0.0-alpha.7]: https://github.com/labacacia/NPS-sdk-java/releases/tag/v1.0.0-alpha.7
 [1.0.0-alpha.2]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.2
 [1.0.0-alpha.1]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.1

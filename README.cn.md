@@ -1,6 +1,14 @@
 [English Version](./README.md) | 中文版
 
 # NPS Java SDK (`nps-java`)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.13-orange.svg)](CHANGELOG.cn.md)
+[![Next](https://img.shields.io/badge/next-v1.0.0--alpha.14--candidate-yellow.svg)](CHANGELOG.cn.md#100-alpha14--unreleased)
+[![NCP](https://img.shields.io/badge/NCP-v0.8-5b8cff.svg)]()
+[![NWP](https://img.shields.io/badge/NWP-v0.14-4af0b0.svg)]()
+[![NIP](https://img.shields.io/badge/NIP-v0.10-7b61ff.svg)]()
+[![NDP](https://img.shields.io/badge/NDP-v0.9-f0a050.svg)]()
+[![NOP](https://img.shields.io/badge/NOP-v0.7-ff8c42.svg)]()
 
 面向 **Neural Protocol Suite (NPS)** 的 Java 客户端库 —— 为 AI Agent 与模型设计的完整互联网协议栈。
 
@@ -11,6 +19,8 @@
 **v1.0.0-alpha.13 —— RFC-0002 跨 SDK 端口波（首棒语言）**
 
 覆盖 NCP + NWP + NIP + NDP + NOP 五个协议，加完整 **NPS-RFC-0002** X.509 + ACME `agent-01` NID 证书原语（`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`）。
+
+Alpha.14 候选新增：远程 NIP CA 类型化客户端（`NipCaClient`）、native-mode NWP 服务端 helper（`NwpNativeNodeServer`）和 TC-N1/TC-N2 一致性 manifest helper（`com.labacacia.nps.conformance`）。
 
 ## 环境要求
 
@@ -39,12 +49,13 @@
 |---------|------|
 | `com.labacacia.nps.core` | 帧头、编解码器（Tier-1 JSON / Tier-2 MsgPack）、帧注册表、anchor 缓存、异常 |
 | `com.labacacia.nps.ncp`  | NCP 帧：`AnchorFrame`、`DiffFrame`、`StreamFrame`、`CapsFrame`、`HelloFrame`、`ErrorFrame` |
-| `com.labacacia.nps.nwp`  | NWP 帧：`QueryFrame`、`ActionFrame`、`AsyncActionResponse`；`NwpClient`（HTTP） |
+| `com.labacacia.nps.nwp`  | NWP 帧：`QueryFrame`、`ActionFrame`、`AsyncActionResponse`；`NwpClient`（HTTP）；`NwpNativeNodeServer` |
 | `com.labacacia.nps.nip`         | NIP 帧：`IdentFrame`、`TrustFrame`、`RevokeFrame`；`NipIdentity`（Ed25519 密钥管理）；`NipIdentVerifier`（RFC-0002 §8.1 双信任）；`AssuranceLevel`（RFC-0003） |
 | `com.labacacia.nps.nip.x509`    | RFC-0002 X.509 NID 证书：`NipX509Builder` / `NipX509Verifier` / `Ed25519PublicKeys` / `NpsX509Oids` |
 | `com.labacacia.nps.nip.acme`    | RFC-0002 ACME `agent-01`：`AcmeClient` / `AcmeServer`（进程内） / `AcmeJws` / `AcmeMessages` |
 | `com.labacacia.nps.ndp`  | NDP 帧：`AnnounceFrame`、`ResolveFrame`、`GraphFrame`；`InMemoryNdpRegistry`；`NdpAnnounceValidator` |
 | `com.labacacia.nps.nop`  | NOP 帧：`TaskFrame`、`DelegateFrame`、`SyncFrame`、`AlignStreamFrame`；`BackoffStrategy`；`NopTaskStatus` |
+| `com.labacacia.nps.conformance` | TC-N1/TC-N2 一致性用例目录、manifest 构造器和校验器 |
 
 ## 快速开始
 
@@ -102,6 +113,23 @@ for (var sf : frames) {
 }
 ```
 
+### NWP Native 服务端
+
+```java
+import com.labacacia.nps.ncp.CapsFrame;
+import com.labacacia.nps.nwp.NwpNativeNodeServer;
+import java.util.List;
+import java.util.Map;
+
+var server = new NwpNativeNodeServer(
+    query -> new CapsFrame("native:orders", 1, List.of(Map.<String, Object>of("id", 42))),
+    action -> Map.of("action", action.actionId())
+);
+
+// `input`/`output` 已完成 NCP preamble、TLS 和 Hello negotiation。
+server.serve(input, output);
+```
+
 ### NIP 身份 —— 签名 & 验签
 
 ```java
@@ -121,6 +149,45 @@ boolean ok  = identity.verify(payload, sig); // true
 // 持久化与加载（AES-256-GCM + PBKDF2）
 identity.save(Path.of("my-node.key"), "my-passphrase");
 var loaded = NipIdentity.load(Path.of("my-node.key"), "my-passphrase");
+```
+
+### NIP 远程 CA Client
+
+```java
+import com.labacacia.nps.nip.NipCaClient;
+import com.labacacia.nps.nip.NipCaRegisterRequest;
+import java.util.List;
+
+var ca = new NipCaClient("https://ca.example.com", "/nip", null);
+var discovery = ca.getDiscovery();
+var ident = ca.registerAgent(
+    new NipCaRegisterRequest("agent-a", "ed25519:<pub>", List.of("nwp:query"), null, null),
+    "token"
+);
+var status = ca.verifyAgent(ident.nid);
+```
+
+### 一致性 Manifest
+
+```java
+import com.labacacia.nps.conformance.NpsConformance;
+import com.labacacia.nps.conformance.NpsConformanceCaseResult;
+import com.labacacia.nps.conformance.NpsConformanceManifest;
+
+var results = NpsConformance.catalogForProfile(NpsConformance.NODE_L1).stream()
+    .map(c -> new NpsConformanceCaseResult(c.id(), "pass", null))
+    .toList();
+var manifest = NpsConformanceManifest.create(
+    NpsConformance.NODE_L1,
+    "my-node",
+    "1.0.0-alpha.14",
+    "urn:nps:node:example.com:my-node",
+    "labacacia-fixture",
+    "1.0.0-alpha.14",
+    results,
+    "ci"
+);
+var validation = NpsConformance.validate(manifest);
 ```
 
 ### NDP 注册表 —— announce & resolve
@@ -259,4 +326,4 @@ var retrieved = cache.get("sha256:...");
 
 ## 许可证
 
-[Apache 2.0](https://github.com/labacacia/NPS-Dev/blob/main/LICENSE) © 2026 INNO LOTUS PTY LTD
+[Apache 2.0](LICENSE) © 2026 INNO LOTUS PTY LTD

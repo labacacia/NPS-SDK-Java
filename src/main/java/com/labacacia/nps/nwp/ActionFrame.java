@@ -58,6 +58,7 @@ public final class ActionFrame implements NpsFrame {
     public Map<String, Object> toDict() {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("action_id",       actionId);
+        m.put("action",          actionId);
         m.put("params",          params);
         m.put("async",           async_ != null ? async_ : false);
         m.put("idempotency_key", idempotencyKey);
@@ -71,8 +72,9 @@ public final class ActionFrame implements NpsFrame {
     @SuppressWarnings("unchecked")
     public static ActionFrame fromDict(Map<String, Object> d) {
         Object tm = d.get("timeout_ms");
+        Object action = d.containsKey("action_id") ? d.get("action_id") : d.get("action");
         return new ActionFrame(
-            (String) d.get("action_id"),
+            (String) action,
             (Map<String,Object>) d.get("params"),
             (Boolean) d.get("async"),
             (String) d.get("idempotency_key"),
