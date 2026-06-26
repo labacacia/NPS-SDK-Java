@@ -1,9 +1,8 @@
 English | [中文版](./README.cn.md)
 
 # NPS Java SDK (`nps-java`)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.13-orange.svg)](CHANGELOG.md)
-[![Next](https://img.shields.io/badge/next-v1.0.0--alpha.14--candidate-yellow.svg)](CHANGELOG.md#100-alpha14--unreleased)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](../../LICENSE)
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.14-orange.svg)](../../CHANGELOG.md)
 [![NCP](https://img.shields.io/badge/NCP-v0.8-5b8cff.svg)]()
 [![NWP](https://img.shields.io/badge/NWP-v0.14-4af0b0.svg)]()
 [![NIP](https://img.shields.io/badge/NIP-v0.10-7b61ff.svg)]()
@@ -16,7 +15,7 @@ Package group: `com.labacacia.nps` | Java 21+ | Gradle 8+
 
 ## Status
 
-**v1.0.0-alpha.13 — RFC-0002 cross-SDK port (lead language)**
+**v1.0.0-alpha.14 — RFC-0002 cross-SDK port (lead language)**
 
 Covers all five NPS protocols: NCP + NWP + NIP + NDP + NOP, plus full **NPS-RFC-0002** X.509 + ACME `agent-01` NID certificate primitives (`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`).
 
@@ -326,4 +325,4 @@ Test classes:
 
 ## License
 
-[Apache 2.0](LICENSE) © 2026 INNO LOTUS PTY LTD
+[Apache 2.0](https://github.com/labacacia/NPS-Dev/blob/main/LICENSE) © 2026 INNO LOTUS PTY LTD
