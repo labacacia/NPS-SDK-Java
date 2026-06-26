@@ -55,7 +55,7 @@ final class NipCaClientTest {
 
     @Test
     void errorResponseThrowsTypedException() {
-        server.createContext("/v1/agents/urn%3Anps%3Aagent%3Aexample.test%3Aa/renew", exchange -> {
+        server.createContext("/v1/agents/urn:nps:agent:example.test:a/renew", exchange -> {
             byte[] response = "{\"error_code\":\"NIP-CA-UNAUTHORIZED\",\"message\":\"nope\"}".getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(401, response.length);
