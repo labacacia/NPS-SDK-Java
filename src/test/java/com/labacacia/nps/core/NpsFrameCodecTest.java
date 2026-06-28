@@ -10,7 +10,6 @@ import com.labacacia.nps.ncp.*;
 import com.labacacia.nps.nwp.QueryFrame;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Path;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -179,10 +178,9 @@ class NpsFrameCodecTest {
 
     @SuppressWarnings("unchecked")
     @Test void binaryVectorConformanceFixture() throws Exception {
-        var fixturePath = Path.of(System.getProperty("user.dir"))
-            .resolve("../../spec/conformance/ncp/binary_vector_payload_vectors.json")
-            .normalize();
-        Map<String, Object> fixture = MAPPER.readValue(fixturePath.toFile(), Map.class);
+        var fixtureResource = getClass().getResource("/conformance/ncp/binary_vector_payload_vectors.json");
+        assertNotNull(fixtureResource, "binary vector conformance fixture must be packaged as a test resource");
+        Map<String, Object> fixture = MAPPER.readValue(fixtureResource, Map.class);
         var vectors = (List<Map<String, Object>>) fixture.get("vectors");
         var fullCodec = new NpsFrameCodec(NpsRegistries.createFull());
         int flags = FrameFlags.TIER3_BINARY_VECTOR | FrameFlags.FINAL;
