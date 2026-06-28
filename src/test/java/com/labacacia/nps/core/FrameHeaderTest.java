@@ -10,8 +10,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class FrameHeaderTest {
 
     @Test void parsesDefaultHeader() {
-        // ANCHOR(0x01), FINAL|TIER2_MSGPACK(0x09), length=10
-        byte[] buf = { 0x01, 0x09, 0x00, 0x0A };
+        // ANCHOR(0x01), FINAL|TIER2_MSGPACK(0x05), length=10
+        byte[] buf = { 0x01, 0x05, 0x00, 0x0A };
         FrameHeader h = FrameHeader.parse(buf);
         assertEquals(FrameType.ANCHOR, h.frameType);
         assertTrue(h.isFinal());
@@ -68,8 +68,15 @@ class FrameHeaderTest {
         assertEquals(EncodingTier.MSGPACK, h.encodingTier());
     }
 
+    @Test void binaryVectorTierDetectedCorrectly() {
+        FrameHeader h = new FrameHeader(FrameType.QUERY,
+            FrameFlags.TIER3_BINARY_VECTOR | FrameFlags.FINAL, 0);
+        assertEquals(EncodingTier.BINARY_VECTOR, h.encodingTier());
+        assertEquals(0x06, h.flags);
+    }
+
     @Test void unknownFrameTypeThrows() {
-        byte[] buf = { (byte) 0x99, 0x09, 0x00, 0x00 };
+        byte[] buf = { (byte) 0x99, 0x05, 0x00, 0x00 };
         assertThrows(NpsFrameError.class, () -> FrameHeader.parse(buf));
     }
 }

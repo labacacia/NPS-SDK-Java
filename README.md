@@ -2,8 +2,8 @@ English | [中文版](./README.cn.md)
 
 # NPS Java SDK (`nps-java`)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](../../LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.14-orange.svg)](../../CHANGELOG.md)
-[![NCP](https://img.shields.io/badge/NCP-v0.8-5b8cff.svg)]()
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.15-orange.svg)](../../CHANGELOG.md)
+[![NCP](https://img.shields.io/badge/NCP-v0.9-5b8cff.svg)]()
 [![NWP](https://img.shields.io/badge/NWP-v0.14-4af0b0.svg)]()
 [![NIP](https://img.shields.io/badge/NIP-v0.10-7b61ff.svg)]()
 [![NDP](https://img.shields.io/badge/NDP-v0.9-f0a050.svg)]()
@@ -15,11 +15,11 @@ Package group: `com.labacacia.nps` | Java 21+ | Gradle 8+
 
 ## Status
 
-**v1.0.0-alpha.14 — RFC-0002 cross-SDK port (lead language)**
+**v1.0.0-alpha.15 — RFC-0002 cross-SDK port (lead language)**
 
 Covers all five NPS protocols: NCP + NWP + NIP + NDP + NOP, plus full **NPS-RFC-0002** X.509 + ACME `agent-01` NID certificate primitives (`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`).
 
-Alpha.14 candidate additions: typed remote NIP CA client (`NipCaClient`), native-mode NWP serving helper (`NwpNativeNodeServer`), and TC-N1/TC-N2 conformance manifest helpers (`com.labacacia.nps.conformance`).
+Alpha.15 additions: typed remote NIP CA client (`NipCaClient`), native-mode NWP serving helper (`NwpNativeNodeServer`), and TC-N1/TC-N2 conformance manifest helpers (`com.labacacia.nps.conformance`).
 
 ## Requirements
 
@@ -179,10 +179,10 @@ var results = NpsConformance.catalogForProfile(NpsConformance.NODE_L1).stream()
 var manifest = NpsConformanceManifest.create(
     NpsConformance.NODE_L1,
     "my-node",
-    "1.0.0-alpha.14",
+    "1.0.0-alpha.15",
     "urn:nps:node:example.com:my-node",
     "labacacia-fixture",
-    "1.0.0-alpha.14",
+    "1.0.0-alpha.15",
     results,
     "ci"
 );

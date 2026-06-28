@@ -45,7 +45,7 @@ class NipX509Tests {
     /** End-to-end happy path: issue v2 IdentFrame, dual-trust verifier accepts. */
     @Test
     void registerX509_RoundTrip_VerifierAccepts() throws Exception {
-        String caNid    = "urn:nps:ca:test";
+        String caNid    = "urn:nps:org:test";
         String agentNid = "urn:nps:agent:happy:1";
 
         // 1) CA root keypair + self-signed root cert.
@@ -84,7 +84,7 @@ class NipX509Tests {
     /** Tampered chain whose leaf has no EKU extension is rejected with NIP-CERT-EKU-MISSING. */
     @Test
     void registerX509_LeafEkuStripped_VerifierRejectsCertEkuMissing() throws Exception {
-        String caNid    = "urn:nps:ca:test";
+        String caNid    = "urn:nps:org:test";
         String agentNid = "urn:nps:agent:eku-stripped:1";
 
         KeyPair caKp     = generate();
@@ -115,7 +115,7 @@ class NipX509Tests {
     /** Forged leaf for a different NID is rejected with NIP-CERT-SUBJECT-NID-MISMATCH. */
     @Test
     void registerX509_LeafForDifferentNid_VerifierRejectsSubjectMismatch() throws Exception {
-        String caNid    = "urn:nps:ca:test";
+        String caNid    = "urn:nps:org:test";
         String agentNid = "urn:nps:agent:victim:1";
         String forgedNid = "urn:nps:agent:attacker:9";
 
@@ -154,7 +154,7 @@ class NipX509Tests {
     /** Phase 1 backward compat: v1-only verifier ignores cert_chain and accepts v2 frames. */
     @Test
     void v1OnlyVerifier_AcceptsV2FrameByIgnoringCertChain() throws Exception {
-        String caNid    = "urn:nps:ca:test";
+        String caNid    = "urn:nps:org:test";
         String agentNid = "urn:nps:agent:v1-compat:1";
 
         KeyPair caKp     = generate();
@@ -189,7 +189,7 @@ class NipX509Tests {
     /** v2 verifier whose trust roots don't include this chain rejects with NIP-CERT-FORMAT-INVALID. */
     @Test
     void v2Verifier_RejectsV2FrameWhenTrustedRootsMissing() throws Exception {
-        String caNid    = "urn:nps:ca:test";
+        String caNid    = "urn:nps:org:test";
         String agentNid = "urn:nps:agent:wrong-trust:1";
 
         KeyPair caKp     = generate();
@@ -213,7 +213,7 @@ class NipX509Tests {
 
         // Different unrelated CA root — chain won't anchor.
         KeyPair otherCaKp = generate();
-        X509Certificate otherRoot = NipX509Builder.issueRoot("urn:nps:ca:other",
+        X509Certificate otherRoot = NipX509Builder.issueRoot("urn:nps:org:other",
             otherCaKp.getPrivate(),
             Ed25519PublicKeys.extractRaw(otherCaKp.getPublic()),
             Instant.now().minus(Duration.ofMinutes(1)),

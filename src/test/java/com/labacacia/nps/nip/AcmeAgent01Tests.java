@@ -193,7 +193,7 @@ class AcmeAgent01Tests {
         }
 
         static Fixture create() throws Exception {
-            String caNid    = "urn:nps:ca:acme-test";
+            String caNid    = "urn:nps:org:acme-test";
             String agentNid = "urn:nps:agent:acme-test:1";
 
             KeyPair caKp = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();

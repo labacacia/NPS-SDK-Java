@@ -16,6 +16,7 @@ public interface NdpErrorCodes {
     String NDP_RESOLVE_NOT_FOUND = "NDP-RESOLVE-NOT-FOUND";
     String NDP_RESOLVE_AMBIGUOUS = "NDP-RESOLVE-AMBIGUOUS";
     String NDP_RESOLVE_TIMEOUT   = "NDP-RESOLVE-TIMEOUT";
+    String NDP_RESOLVE_STALE     = "NDP-RESOLVE-STALE";
 
     // ── Announce ──────────────────────────────────────────────────────────────
     String NDP_ANNOUNCE_SIGNATURE_INVALID = "NDP-ANNOUNCE-SIGNATURE-INVALID";
@@ -23,13 +24,14 @@ public interface NdpErrorCodes {
     String NDP_ANNOUNCE_ROLE_REMOVED      = "NDP-ANNOUNCE-ROLE-REMOVED";
     String NDP_ANNOUNCE_ROLE_UNKNOWN      = "NDP-ANNOUNCE-ROLE-UNKNOWN";
     String NDP_ANNOUNCE_CONFLICT          = "NDP-ANNOUNCE-CONFLICT";
+    String NDP_ANNOUNCE_PROFILE_VIOLATION = "NDP-ANNOUNCE-PROFILE-VIOLATION";
 
     // ── Graph ─────────────────────────────────────────────────────────────────
     String NDP_GRAPH_SEQ_ROLLBACK = "NDP-GRAPH-SEQ-ROLLBACK";
     String NDP_GRAPH_SEQ_GAP      = "NDP-GRAPH-SEQ-GAP";
-    /** GraphFrame §5 topology-snapshot: structure is invalid (NPS-4 roadmap). */
+    /** GraphFrame §3.3 topology-snapshot: structure is invalid (NPS-4 roadmap). */
     String NDP_GRAPH_INVALID      = "NDP-GRAPH-INVALID";
-    /** GraphFrame §5 topology-snapshot: node/edge count exceeds limit (NPS-4 roadmap). */
+    /** GraphFrame §3.3 topology-snapshot: node/edge count exceeds limit (NPS-4 roadmap). */
     String NDP_GRAPH_TOO_LARGE    = "NDP-GRAPH-TOO-LARGE";
 
     // ── Federation ────────────────────────────────────────────────────────────
@@ -56,11 +58,13 @@ public interface NdpErrorCodes {
         Map.entry(NDP_RESOLVE_NOT_FOUND,          NpsStatusCodes.NPS_CLIENT_NOT_FOUND),
         Map.entry(NDP_RESOLVE_AMBIGUOUS,          NpsStatusCodes.NPS_CLIENT_CONFLICT),
         Map.entry(NDP_RESOLVE_TIMEOUT,            NpsStatusCodes.NPS_SERVER_TIMEOUT),
+        Map.entry(NDP_RESOLVE_STALE,              NpsStatusCodes.NPS_CLIENT_NOT_FOUND),
         Map.entry(NDP_ANNOUNCE_SIGNATURE_INVALID, NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
         Map.entry(NDP_ANNOUNCE_NID_MISMATCH,      NpsStatusCodes.NPS_CLIENT_BAD_FRAME),
         Map.entry(NDP_ANNOUNCE_ROLE_REMOVED,      NpsStatusCodes.NPS_CLIENT_BAD_FRAME),
         Map.entry(NDP_ANNOUNCE_ROLE_UNKNOWN,      NpsStatusCodes.NPS_CLIENT_BAD_FRAME),
         Map.entry(NDP_ANNOUNCE_CONFLICT,          NpsStatusCodes.NPS_CLIENT_CONFLICT),
+        Map.entry(NDP_ANNOUNCE_PROFILE_VIOLATION, NpsStatusCodes.NPS_AUTH_FORBIDDEN),
         Map.entry(NDP_GRAPH_SEQ_ROLLBACK,         NpsStatusCodes.NPS_CLIENT_BAD_FRAME),
         Map.entry(NDP_GRAPH_SEQ_GAP,              NpsStatusCodes.NPS_STREAM_SEQ_GAP),
         Map.entry(NDP_GRAPH_INVALID,              NpsStatusCodes.NPS_CLIENT_BAD_FRAME),

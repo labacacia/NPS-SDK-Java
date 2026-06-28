@@ -78,7 +78,7 @@ class NipIdentityTest {
 
     @Test void identFrameRoundtrip() {
         var codec = new NpsFrameCodec(NpsRegistries.createFull());
-        var meta  = Map.<String,Object>of("issuer", "urn:nps:ca:root", "issuedAt", "2026-01-01T00:00:00Z");
+        var meta  = Map.<String,Object>of("issuer", "urn:nps:org:root.example", "issuedAt", "2026-01-01T00:00:00Z");
         var frame = new IdentFrame("urn:nps:node:a:1", "ed25519:aabbcc", meta, "ed25519:sig");
         var out   = (IdentFrame) codec.decode(codec.encode(frame));
         assertEquals("urn:nps:node:a:1", out.nid());
@@ -92,29 +92,74 @@ class NipIdentityTest {
             "urn:nps:org:org-b.com",
             List.of("nwp:query", "nwp:stream"),
             List.of("nwp://api.org-a.com/public/*"),
+            "2026-05-11T00:00:00Z",
             "2027-01-01T00:00:00Z",
+            "00000000000A3F9C",
+            "urn:nps:org:org-a.com",
             "ed25519:sig");
         var out = (TrustFrame) codec.decode(codec.encode(frame));
         assertEquals("urn:nps:org:org-a.com", out.grantorNid());
         assertEquals("urn:nps:org:org-b.com", out.granteeCa());
         assertEquals(List.of("nwp:query", "nwp:stream"), out.trustScope());
         assertEquals(List.of("nwp://api.org-a.com/public/*"), out.nodes());
+        assertEquals("2026-05-11T00:00:00Z", out.issuedAt());
+        assertEquals("00000000000A3F9C", out.serial());
+        assertEquals("urn:nps:org:org-a.com", out.signerNid());
         assertNull(frame.unsignedDict().get("signature"));
     }
 
     @Test void revokeFrameRoundtrip() {
         var codec = new NpsFrameCodec(NpsRegistries.createFull());
-        var frame = new RevokeFrame("urn:nps:node:a:1", "compromised", "2026-06-01T00:00:00Z");
+        var frame = new RevokeFrame(
+            "urn:nps:agent:ca.example.com:session-1",
+            "0x0A3F9C",
+            "parent_revoked",
+            "2026-06-01T00:00:00Z",
+            "urn:nps:agent:ca.example.com:group-1",
+            "urn:nps:org:ca.example.com",
+            "ed25519:sig");
         var out   = (RevokeFrame) codec.decode(codec.encode(frame));
-        assertEquals("compromised", out.reason());
+        assertEquals("urn:nps:agent:ca.example.com:session-1", out.targetNid());
+        assertEquals("0x0A3F9C", out.serial());
+        assertEquals("parent_revoked", out.reason());
         assertEquals("2026-06-01T00:00:00Z", out.revokedAt());
+        assertEquals("urn:nps:agent:ca.example.com:group-1", out.parentNid());
+        assertEquals("urn:nps:org:ca.example.com", out.signerNid());
+        assertNull(frame.unsignedDict().get("signature"));
     }
 
-    @Test void revokeFrameOptionalFieldsNull() {
+    @Test void revokeFrameWholeNidOmitSerial() {
         var codec = new NpsFrameCodec(NpsRegistries.createFull());
-        var frame = new RevokeFrame("urn:nps:node:a:1");
+        var frame = new RevokeFrame(
+            "urn:nps:agent:ca.example.com:old",
+            "affiliation_changed",
+            "2026-06-01T00:00:00Z",
+            "urn:nps:org:ca.example.com",
+            "ed25519:sig");
         var out   = (RevokeFrame) codec.decode(codec.encode(frame));
-        assertNull(out.reason());
-        assertNull(out.revokedAt());
+        assertNull(out.serial());
+        assertEquals("affiliation_changed", out.reason());
+    }
+
+    @Test void revokeFrameRejectsInvalidParentNidShape() {
+        var missingParent = assertThrows(IllegalArgumentException.class, () -> new RevokeFrame(
+            "urn:nps:agent:ca.example.com:session-1",
+            null,
+            "parent_revoked",
+            "2026-06-01T00:00:00Z",
+            null,
+            "urn:nps:org:ca.example.com",
+            "ed25519:sig"));
+        assertTrue(missingParent.getMessage().contains(NipErrorCodes.REVOKE_FRAME_INVALID));
+
+        var strayParent = assertThrows(IllegalArgumentException.class, () -> new RevokeFrame(
+            "urn:nps:agent:ca.example.com:old",
+            null,
+            "key_compromise",
+            "2026-06-01T00:00:00Z",
+            "urn:nps:agent:ca.example.com:group-1",
+            "urn:nps:org:ca.example.com",
+            "ed25519:sig"));
+        assertTrue(strayParent.getMessage().contains(NipErrorCodes.REVOKE_FRAME_INVALID));
     }
 }

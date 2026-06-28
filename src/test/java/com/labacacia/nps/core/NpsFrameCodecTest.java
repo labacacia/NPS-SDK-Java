@@ -2,12 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.labacacia.nps.core;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.labacacia.nps.core.codec.NpsFrameCodec;
 import com.labacacia.nps.core.exception.NpsCodecError;
 import com.labacacia.nps.core.registry.NpsRegistries;
 import com.labacacia.nps.ncp.*;
+import com.labacacia.nps.nwp.QueryFrame;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class NpsFrameCodecTest {
 
     private static final String AID    = "sha256:" + "a".repeat(64);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Map<String, Object> SCHEMA = Map.of(
         "fields", List.of(Map.of("name", "id", "type", "uint64"),
                           Map.of("name", "name", "type", "string")));
@@ -146,6 +152,60 @@ class NpsFrameCodecTest {
         assertFalse(out.extSupport());
         assertEquals(0xFFFF, out.maxFramePayload());
         assertEquals(32,     out.maxConcurrentStreams());
+    }
+
+    @Test void encodesDecodesQueryFrameBinaryVector() {
+        var fullCodec = new NpsFrameCodec(NpsRegistries.createFull());
+        var vectorSearch = new LinkedHashMap<String, Object>();
+        vectorSearch.put("field", "embedding");
+        vectorSearch.put("vector", List.of(0.25, -1.5, 3.0));
+        vectorSearch.put("top_k", 2);
+        vectorSearch.put("metric", "cosine");
+        var frame = new QueryFrame(AID, null, 3, null, null, null, vectorSearch, null);
+
+        var wire = fullCodec.encode(frame, EncodingTier.BINARY_VECTOR);
+        var header = NpsFrameCodec.peekHeader(wire);
+        assertEquals(EncodingTier.BINARY_VECTOR, header.encodingTier());
+        assertArrayEquals(new byte[] { 'N', 'P', 'B', 'V' },
+            java.util.Arrays.copyOfRange(wire, header.headerSize(), header.headerSize() + 4));
+
+        var out = (QueryFrame) fullCodec.decode(wire);
+        var vector = (List<?>) out.vectorSearch().get("vector");
+        assertEquals(3, vector.size());
+        assertEquals(0.25, ((Number) vector.get(0)).doubleValue(), 0.00001);
+        assertEquals(-1.5, ((Number) vector.get(1)).doubleValue(), 0.00001);
+        assertEquals(3.0, ((Number) vector.get(2)).doubleValue(), 0.00001);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test void binaryVectorConformanceFixture() throws Exception {
+        var fixturePath = Path.of(System.getProperty("user.dir"))
+            .resolve("../../spec/conformance/ncp/binary_vector_payload_vectors.json")
+            .normalize();
+        Map<String, Object> fixture = MAPPER.readValue(fixturePath.toFile(), Map.class);
+        var vectors = (List<Map<String, Object>>) fixture.get("vectors");
+        var fullCodec = new NpsFrameCodec(NpsRegistries.createFull());
+        int flags = FrameFlags.TIER3_BINARY_VECTOR | FrameFlags.FINAL;
+
+        for (Map<String, Object> vectorCase : vectors) {
+            var input = (Map<String, Object>) vectorCase.get("input");
+            byte[] payload = HexFormat.of().parseHex((String) input.get("payload_hex"));
+            byte[] header = new FrameHeader(FrameType.QUERY, flags, payload.length).toBytes();
+            byte[] wire = new byte[header.length + payload.length];
+            System.arraycopy(header, 0, wire, 0, header.length);
+            System.arraycopy(payload, 0, wire, header.length, payload.length);
+
+            if ("negative".equals(vectorCase.get("kind"))) {
+                assertThrows(NpsCodecError.class, () -> fullCodec.decode(wire));
+                continue;
+            }
+
+            var out = (QueryFrame) fullCodec.decode(wire);
+            var vector = (List<?>) out.vectorSearch().get("vector");
+            assertEquals(0.25, ((Number) vector.get(0)).doubleValue(), 0.00001);
+            assertEquals(-1.5, ((Number) vector.get(1)).doubleValue(), 0.00001);
+            assertEquals(3.0, ((Number) vector.get(2)).doubleValue(), 0.00001);
+        }
     }
 
     @Test void helloFrameTypeCodeIs06() {

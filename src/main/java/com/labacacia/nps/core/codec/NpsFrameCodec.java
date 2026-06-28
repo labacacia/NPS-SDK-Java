@@ -21,8 +21,9 @@ public final class NpsFrameCodec {
 
     private final FrameRegistry      registry;
     private final long               maxPayload;
-    private final Tier1JsonCodec     jsonCodec    = new Tier1JsonCodec();
-    private final Tier2MsgPackCodec  msgpackCodec = new Tier2MsgPackCodec();
+    private final Tier1JsonCodec         jsonCodec         = new Tier1JsonCodec();
+    private final Tier2MsgPackCodec      msgpackCodec      = new Tier2MsgPackCodec();
+    private final Tier3BinaryVectorCodec binaryVectorCodec = new Tier3BinaryVectorCodec();
 
     public NpsFrameCodec(FrameRegistry registry) {
         this(registry, DEFAULT_MAX_PAYLOAD);
@@ -82,16 +83,20 @@ public final class NpsFrameCodec {
 
     private byte[] encodePayload(NpsFrame frame, EncodingTier tier) {
         return switch (tier) {
-            case JSON    -> jsonCodec.encode(frame);
-            case MSGPACK -> msgpackCodec.encode(frame);
+            case JSON          -> jsonCodec.encode(frame);
+            case MSGPACK       -> msgpackCodec.encode(frame);
+            case BINARY_VECTOR -> binaryVectorCodec.encode(frame);
+            case RESERVED      -> throw new NpsCodecError("Reserved encoding tier 0x03");
         };
     }
 
     private NpsFrame decodePayload(com.labacacia.nps.core.FrameType type,
                                    EncodingTier tier, byte[] payload) {
         return switch (tier) {
-            case JSON    -> jsonCodec.decode(type, payload, registry);
-            case MSGPACK -> msgpackCodec.decode(type, payload, registry);
+            case JSON          -> jsonCodec.decode(type, payload, registry);
+            case MSGPACK       -> msgpackCodec.decode(type, payload, registry);
+            case BINARY_VECTOR -> binaryVectorCodec.decode(type, payload, registry);
+            case RESERVED      -> throw new NpsCodecError("Reserved encoding tier 0x03");
         };
     }
 }

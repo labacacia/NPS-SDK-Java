@@ -113,11 +113,7 @@ public final class NipCaClient {
         }
         Map<String, Object> error = Map.of();
         if (response.body().length > 0) {
-            try {
-                error = MAPPER.readValue(response.body(), new TypeReference<Map<String, Object>>() {});
-            } catch (IOException ignored) {
-                error = Map.of();
-            }
+            error = MAPPER.readValue(response.body(), new TypeReference<Map<String, Object>>() {});
         }
         String code = String.valueOf(error.getOrDefault("error_code", error.getOrDefault("error", "NIP-CA-HTTP-ERROR")));
         String message = String.valueOf(error.getOrDefault("message", "NIP CA returned HTTP " + status + "."));

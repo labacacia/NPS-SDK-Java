@@ -5,7 +5,7 @@ package com.labacacia.nps.ndp;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** A directed edge between two nodes in a {@link GraphFrame} (§5 format). */
+/** A directed edge between two nodes in a {@link GraphFrame} (§3.3 format). */
 public final class GraphEdge {
 
     private final String  fromNid;    // mandatory

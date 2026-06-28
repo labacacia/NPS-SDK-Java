@@ -7,6 +7,7 @@ import com.labacacia.nps.core.registry.NpsRegistries;
 import com.labacacia.nps.nip.NipIdentity;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -22,7 +23,7 @@ class NdpTest {
 
     private AnnounceFrame makeAnnounce(NipIdentity id, int ttl) {
         var ts = "2026-01-01T00:00:00Z";
-        // Build a temporary frame to get its unsignedDict (includes node_type:null)
+        // Build a temporary frame to get its signed canonical body.
         var tmp     = new AnnounceFrame(NID, ADDRS, CAPS, ttl, ts, "placeholder", null);
         var sig     = id.sign(tmp.unsignedDict());
         return new AnnounceFrame(NID, ADDRS, CAPS, ttl, ts, sig, null);
@@ -37,6 +38,8 @@ class NdpTest {
         assertEquals(NID, back.nid());
         assertEquals(300, back.ttl());
         assertNull(back.unsignedDict().get("signature"));
+        assertNull(back.unsignedDict().get("node_type"));
+        assertEquals(60_000, back.unsignedDict().get("heartbeat_interval_ms"));
     }
 
     @Test void announceLivenessWireOnly() {
@@ -51,6 +54,32 @@ class NdpTest {
         var back = AnnounceFrame.fromDict(d);
         assertEquals("draining", back.health());
         assertEquals("2026-06-13T00:00:00Z", back.lastSeen());
+    }
+
+    @Test void announceOptionalFieldsRoundtrip() {
+        var endpoint = Map.<String,Object>of("host", "10.0.0.5", "port", 17440, "protocol", "nwp");
+        var f = new AnnounceFrame(
+            NID, ADDRS, CAPS, 300, "t", "sig", "memory",
+            List.of("memory", "bridge"), "urn:nps:node:anchor.example.com:main",
+            "spawnspec:abc", List.of("http", "mcp"), "resident",
+            endpoint, 60_000, null, null);
+        var d = f.toDict();
+        assertEquals(List.of("memory", "bridge"), d.get("node_roles"));
+        assertEquals("urn:nps:node:anchor.example.com:main", d.get("cluster_anchor"));
+        assertEquals("spawnspec:abc", d.get("spawn_spec_ref"));
+        assertEquals(List.of("http", "mcp"), d.get("bridge_protocols"));
+        assertEquals("resident", d.get("activation_mode"));
+        assertEquals(endpoint, d.get("activation_endpoint"));
+        assertEquals(endpoint, f.unsignedDict().get("activation_endpoint"));
+        assertEquals(60_000, f.unsignedDict().get("heartbeat_interval_ms"));
+
+        var back = AnnounceFrame.fromDict(d);
+        assertEquals(List.of("memory", "bridge"), back.nodeRoles());
+        assertEquals("urn:nps:node:anchor.example.com:main", back.clusterAnchor());
+        assertEquals("spawnspec:abc", back.spawnSpecRef());
+        assertEquals(List.of("http", "mcp"), back.bridgeProtocols());
+        assertEquals("resident", back.activationMode());
+        assertEquals(endpoint, back.activationEndpoint());
     }
 
     @Test void announceFrameCodecRoundtrip() {
@@ -81,12 +110,56 @@ class NdpTest {
     // ── GraphFrame ────────────────────────────────────────────────────────────
 
     @Test void graphFrameRoundtrip() {
-        // GraphFrame was rewritten to the §5 topology-snapshot format
+        // GraphFrame was rewritten to the §3.3 topology-snapshot format
         // (graph_id / nodes / edges / ttl).
         var f    = new GraphFrame("g1", List.of(), List.of(), 300);
         var back = GraphFrame.fromDict(f.toDict());
         assertEquals("g1", back.graphId());
         assertEquals(300, back.ttl());
+    }
+
+    @Test void graphFrameRejectsTooLarge() {
+        var nodes = new ArrayList<GraphNode>();
+        for (int i = 0; i < 257; i++) {
+            nodes.add(new GraphNode("urn:nps:node:example.com:" + i));
+        }
+
+        var ex = assertThrows(IllegalArgumentException.class,
+            () -> new GraphFrame("too-big", nodes, List.of(), 60));
+        assertTrue(ex.getMessage().contains(NdpErrorCodes.NDP_GRAPH_TOO_LARGE));
+    }
+
+    @Test void graphFrameRejectsInvalidEdges() {
+        var nodes = List.of(new GraphNode("urn:nps:node:example.com:a"));
+
+        var selfEdge = assertThrows(IllegalArgumentException.class,
+            () -> new GraphFrame("self-edge", nodes, List.of(new GraphEdge(nodes.get(0).nid(), nodes.get(0).nid())), 60));
+        assertTrue(selfEdge.getMessage().contains(NdpErrorCodes.NDP_GRAPH_INVALID));
+
+        var missingEndpoint = assertThrows(IllegalArgumentException.class,
+            () -> new GraphFrame("missing-edge", nodes,
+                List.of(new GraphEdge(nodes.get(0).nid(), "urn:nps:node:example.com:missing")), 60));
+        assertTrue(missingEndpoint.getMessage().contains(NdpErrorCodes.NDP_GRAPH_INVALID));
+    }
+
+    @Test void federationForwardedByHelpers() {
+        var header = "urn:nps:agent:registry-a.example.com:r1, urn:nps:agent:registry-b.example.com:r2";
+        assertEquals(List.of(
+            "urn:nps:agent:registry-a.example.com:r1",
+            "urn:nps:agent:registry-b.example.com:r2"), NdpFederation.parseForwardedBy(header));
+
+        var next = NdpFederation.appendForwardedBy("urn:nps:agent:registry-c.example.com:r3", header);
+        assertTrue(next.isPresent());
+        assertTrue(next.get().contains("registry-c"));
+
+        var loop = assertThrows(IllegalArgumentException.class,
+            () -> NdpFederation.appendForwardedBy("urn:nps:agent:registry-b.example.com:r2", header));
+        assertTrue(loop.getMessage().contains(NdpErrorCodes.NDP_FEDERATION_LOOP));
+
+        var dropped = NdpFederation.appendForwardedBy(
+            "urn:nps:agent:registry-d.example.com:r4",
+            header + ", urn:nps:agent:registry-c.example.com:r3");
+        assertTrue(dropped.isEmpty());
     }
 
     // ── InMemoryNdpRegistry ───────────────────────────────────────────────────
@@ -189,7 +262,7 @@ class NdpTest {
         v.registerPublicKey(NID, id.pubKeyString());
         var f = new AnnounceFrame(NID, ADDRS, CAPS, 300, "2026-01-01T00:00:00Z", "rsa:invalid", null);
         assertFalse(v.validate(f).isValid());
-        assertEquals("NDP-ANNOUNCE-SIG-INVALID", v.validate(f).errorCode());
+        assertEquals("NDP-ANNOUNCE-SIGNATURE-INVALID", v.validate(f).errorCode());
     }
 
     @Test void removePublicKeyDeregisters() {

@@ -37,13 +37,13 @@ public final class NdpAnnounceValidator {
     public NdpAnnounceResult validate(AnnounceFrame frame) {
         String encoded = keys.get(frame.nid());
         if (encoded == null) {
-            return NdpAnnounceResult.fail("NDP-ANNOUNCE-NID-MISMATCH",
+            return NdpAnnounceResult.fail(NdpErrorCodes.NDP_ANNOUNCE_NID_MISMATCH,
                 "No public key registered for NID: " + frame.nid());
         }
 
         String sig = frame.signature();
         if (!sig.startsWith(PREFIX)) {
-            return NdpAnnounceResult.fail("NDP-ANNOUNCE-SIG-INVALID",
+            return NdpAnnounceResult.fail(NdpErrorCodes.NDP_ANNOUNCE_SIGNATURE_INVALID,
                 "Signature must start with 'ed25519:'");
         }
 
@@ -64,11 +64,11 @@ public final class NdpAnnounceValidator {
             verifier.update(message);
             boolean valid = verifier.verify(sigBytes);
 
-            if (!valid) return NdpAnnounceResult.fail("NDP-ANNOUNCE-SIG-INVALID",
+            if (!valid) return NdpAnnounceResult.fail(NdpErrorCodes.NDP_ANNOUNCE_SIGNATURE_INVALID,
                 "Ed25519 signature verification failed.");
             return NdpAnnounceResult.ok();
         } catch (Exception e) {
-            return NdpAnnounceResult.fail("NDP-ANNOUNCE-SIG-INVALID",
+            return NdpAnnounceResult.fail(NdpErrorCodes.NDP_ANNOUNCE_SIGNATURE_INVALID,
                 "Ed25519 signature verification failed.");
         }
     }

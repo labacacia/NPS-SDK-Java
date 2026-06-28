@@ -9,15 +9,20 @@ import com.labacacia.nps.core.NpsFrame;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * NDP Graph frame (§5 format, alpha.11).
+ * NDP Graph frame (§3.3 format, alpha.11).
  *
  * <p>Replaces the previous seq/initial_sync/nodes/patch representation with a
  * stable graph snapshot keyed by {@code graphId}.
  */
 public final class GraphFrame implements NpsFrame {
+
+    private static final int MAX_GRAPH_NODES = 256;
+    private static final int MAX_GRAPH_EDGES = 1024;
 
     private final String               graphId;   // mandatory
     private final List<GraphNode>      nodes;     // mandatory
@@ -32,6 +37,7 @@ public final class GraphFrame implements NpsFrame {
         this.edges    = edges;
         this.ttl      = ttl;
         this.metadata = metadata;
+        validate();
     }
 
     public GraphFrame(String graphId, List<GraphNode> nodes, List<GraphEdge> edges, int ttl) {
@@ -46,6 +52,43 @@ public final class GraphFrame implements NpsFrame {
     public List<GraphEdge> edges()      { return edges; }
     public int ttl()                    { return ttl; }
     public Map<String,Object> metadata(){ return metadata; }
+
+    public void validate() {
+        if (nodes == null || edges == null) {
+            throw new IllegalArgumentException(NdpErrorCodes.NDP_GRAPH_INVALID + ": nodes and edges are required");
+        }
+        if (nodes.size() > MAX_GRAPH_NODES) {
+            throw new IllegalArgumentException(
+                NdpErrorCodes.NDP_GRAPH_TOO_LARGE + ": nodes length exceeds " + MAX_GRAPH_NODES);
+        }
+        if (edges.size() > MAX_GRAPH_EDGES) {
+            throw new IllegalArgumentException(
+                NdpErrorCodes.NDP_GRAPH_TOO_LARGE + ": edges length exceeds " + MAX_GRAPH_EDGES);
+        }
+
+        Set<String> nodeIds = new HashSet<>();
+        for (GraphNode node : nodes) {
+            if (node.nid() == null || node.nid().isEmpty()) {
+                throw new IllegalArgumentException(NdpErrorCodes.NDP_GRAPH_INVALID + ": graph nodes require nid");
+            }
+            nodeIds.add(node.nid());
+        }
+        for (GraphEdge edge : edges) {
+            if (edge.fromNid() == null || edge.fromNid().isEmpty() ||
+                edge.toNid() == null || edge.toNid().isEmpty()) {
+                throw new IllegalArgumentException(
+                    NdpErrorCodes.NDP_GRAPH_INVALID + ": graph edges require from_nid and to_nid");
+            }
+            if (edge.fromNid().equals(edge.toNid())) {
+                throw new IllegalArgumentException(
+                    NdpErrorCodes.NDP_GRAPH_INVALID + ": graph self-edges are forbidden");
+            }
+            if (!nodeIds.contains(edge.fromNid()) || !nodeIds.contains(edge.toNid())) {
+                throw new IllegalArgumentException(
+                    NdpErrorCodes.NDP_GRAPH_INVALID + ": graph edge endpoints must appear in nodes");
+            }
+        }
+    }
 
     @Override
     public Map<String, Object> toDict() {

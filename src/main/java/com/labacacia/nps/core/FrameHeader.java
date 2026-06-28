@@ -40,9 +40,7 @@ public final class FrameHeader {
     public int headerSize()   { return isExtended ? EXTENDED_HEADER_SIZE : DEFAULT_HEADER_SIZE; }
 
     public EncodingTier encodingTier() {
-        if ((flags & FrameFlags.TIER2_MSGPACK) != 0) return EncodingTier.MSGPACK;
-        if ((flags & FrameFlags.TIER1_JSON)    != 0) return EncodingTier.JSON;
-        return EncodingTier.MSGPACK; // default
+        return EncodingTier.fromWireCode(flags & FrameFlags.TIER_MASK);
     }
 
     /** Parse a header from the start of {@code data}. */
@@ -88,11 +86,9 @@ public final class FrameHeader {
 
     /** Build flags byte for a given tier, optionally with EXT and FINAL. */
     public static int buildFlags(EncodingTier tier, boolean isFinal, boolean isExtended) {
-        int f = 0;
+        int f = tier.wireCode & FrameFlags.TIER_MASK;
         if (isFinal)   f |= FrameFlags.FINAL;
         if (isExtended) f |= FrameFlags.EXT;
-        if (tier == EncodingTier.JSON)    f |= FrameFlags.TIER1_JSON;
-        if (tier == EncodingTier.MSGPACK) f |= FrameFlags.TIER2_MSGPACK;
         return f;
     }
 

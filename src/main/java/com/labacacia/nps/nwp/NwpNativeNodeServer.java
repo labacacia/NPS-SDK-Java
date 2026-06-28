@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.labacacia.nps.core.EncodingTier;
 import com.labacacia.nps.core.FrameFlags;
 import com.labacacia.nps.core.FrameHeader;
+import com.labacacia.nps.core.FrameType;
 import com.labacacia.nps.core.NpsFrame;
 import com.labacacia.nps.core.codec.NpsFrameCodec;
 import com.labacacia.nps.core.registry.FrameRegistry;
@@ -42,6 +43,7 @@ public final class NwpNativeNodeServer {
 
     private final NpsFrameCodec codec;
     private final EncodingTier tier;
+    private final List<String> enabledEncodings;
     private final String anchorRef;
     private final QueryHandler queryHandler;
     private final ActionHandler actionHandler;
@@ -56,8 +58,22 @@ public final class NwpNativeNodeServer {
             String anchorRef,
             QueryHandler queryHandler,
             ActionHandler actionHandler) {
+        this(codec, tier, List.of(encodingToken(tier != null ? tier : EncodingTier.MSGPACK)),
+             anchorRef, queryHandler, actionHandler);
+    }
+
+    public NwpNativeNodeServer(
+            NpsFrameCodec codec,
+            EncodingTier tier,
+            List<String> enabledEncodings,
+            String anchorRef,
+            QueryHandler queryHandler,
+            ActionHandler actionHandler) {
         this.codec = codec != null ? codec : new NpsFrameCodec(defaultRegistry());
         this.tier = tier != null ? tier : EncodingTier.MSGPACK;
+        this.enabledEncodings = enabledEncodings == null || enabledEncodings.isEmpty()
+            ? List.of(encodingToken(this.tier))
+            : List.copyOf(enabledEncodings);
         this.anchorRef = anchorRef == null || anchorRef.isBlank() ? "native:nwp" : anchorRef;
         this.queryHandler = queryHandler;
         this.actionHandler = actionHandler;
@@ -91,6 +107,16 @@ public final class NwpNativeNodeServer {
     }
 
     public byte[] dispatchWire(byte[] wire) {
+        FrameHeader header = FrameHeader.parse(wire);
+        if (!encodingAllowed(header)) {
+            return codec.encode(new ErrorFrame(
+                "NPS-SERVER-ENCODING-UNSUPPORTED",
+                "NCP-ENCODING-UNSUPPORTED",
+                "Frame type 0x" + Integer.toHexString(header.frameType.code) +
+                    " used " + encodingToken(header.encodingTier()) +
+                    ", but the negotiated policy allows " + String.join(", ", enabledEncodings) + ".",
+                null), tier);
+        }
         return codec.encode(dispatch(codec.decode(wire)), tier);
     }
 
@@ -146,5 +172,22 @@ public final class NwpNativeNodeServer {
         NcpFrameRegistrar.register(registry);
         NwpFrameRegistrar.register(registry);
         return registry;
+    }
+
+    private boolean encodingAllowed(FrameHeader header) {
+        if (header.encodingTier() == tier) return true;
+        return header.encodingTier() == EncodingTier.BINARY_VECTOR
+            && header.frameType == FrameType.QUERY
+            && enabledEncodings.contains("binary_vector.v1");
+    }
+
+    private static String encodingToken(EncodingTier tier) {
+        if (tier == null) return "msgpack";
+        return switch (tier) {
+            case JSON -> "json";
+            case MSGPACK -> "msgpack";
+            case BINARY_VECTOR -> "binary_vector.v1";
+            case RESERVED -> "reserved";
+        };
     }
 }

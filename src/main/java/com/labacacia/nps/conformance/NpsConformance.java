@@ -25,7 +25,7 @@ public final class NpsConformance {
         c("TC-N1-NDP-01", NODE_L1, "N1-NDP-01", "AnnounceFrame carries activation_mode", false),
         c("TC-N1-NDP-02", NODE_L1, "N1-NDP-02", "AnnounceFrame signature", false),
         c("TC-N1-NDP-03", NODE_L1, "N1-NDP-03", "ResolveFrame response", false),
-        c("TC-N1-NDP-04", NODE_L1, "N1-NDP-04", "GraphFrame subscription", true),
+        c("TC-N1-NDP-04", NODE_L1, "N1-NDP-04", "GraphFrame topology snapshot", true),
         c("TC-N1-NWP-01", NODE_L1, "N1-NWP-01", "Inbox accepts ActionFrame", false),
         c("TC-N1-NWP-02", NODE_L1, "N1-NWP-02", "Inbox persists across restart", false),
         c("TC-N1-NWP-03", NODE_L1, "N1-NWP-03", "NWP pull serves inbox", false),

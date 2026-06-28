@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** A node entry in a {@link GraphFrame} (§5 format). */
+/** A node entry in a {@link GraphFrame} (§3.3 format). */
 public final class GraphNode {
 
     private final String       nid;

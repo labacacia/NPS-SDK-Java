@@ -6,8 +6,11 @@ package com.labacacia.nps.core;
 public final class FrameFlags {
     private FrameFlags() {}
 
-    public static final int FINAL        = 0x01;
-    public static final int EXT          = 0x02;
-    public static final int TIER1_JSON   = 0x04;
-    public static final int TIER2_MSGPACK = 0x08;
+    public static final int TIER_MASK           = 0x03;
+    public static final int TIER1_JSON          = 0x00;
+    public static final int TIER2_MSGPACK       = 0x01;
+    public static final int TIER3_BINARY_VECTOR = 0x02;
+    public static final int FINAL               = 0x04;
+    public static final int ENCRYPTED           = 0x08;
+    public static final int EXT                 = 0x80;
 }

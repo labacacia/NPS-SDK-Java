@@ -13,9 +13,8 @@ import java.util.Map;
 /**
  * Cross-CA trust chain and capability grant frame (NPS-3 §5.2).
  *
- * <p><b>Note:</b> Business logic for trust chain validation is a commercial
- * NPS Cloud feature. This class provides the frame definition for codec use;
- * trust chain enforcement is not implemented in the OSS library.
+ * <p>The open SDK carries the full wire frame. Deployments may layer local
+ * pinned-grantor validation or NPS Cloud managed federation policy on top.
  */
 public final class TrustFrame implements NpsFrame {
 
@@ -23,17 +22,24 @@ public final class TrustFrame implements NpsFrame {
     private final String       granteeCa;
     private final List<String> trustScope;
     private final List<String> nodes;
+    private final String       issuedAt;
     private final String       expiresAt;
+    private final String       serial;
+    private final String       signerNid;
     private final String       signature;
 
     public TrustFrame(String grantorNid, String granteeCa,
                       List<String> trustScope, List<String> nodes,
-                      String expiresAt, String signature) {
+                      String issuedAt, String expiresAt,
+                      String serial, String signerNid, String signature) {
         this.grantorNid = grantorNid;
         this.granteeCa  = granteeCa;
         this.trustScope = trustScope;
         this.nodes      = nodes;
+        this.issuedAt   = issuedAt;
         this.expiresAt  = expiresAt;
+        this.serial     = serial;
+        this.signerNid  = signerNid;
         this.signature  = signature;
     }
 
@@ -44,37 +50,53 @@ public final class TrustFrame implements NpsFrame {
     public String       granteeCa()  { return granteeCa; }
     public List<String> trustScope() { return trustScope; }
     public List<String> nodes()      { return nodes; }
+    public String       issuedAt()   { return issuedAt; }
     public String       expiresAt()  { return expiresAt; }
+    public String       serial()     { return serial; }
+    public String       signerNid()  { return signerNid; }
     public String       signature()  { return signature; }
 
     @Override
     public Map<String, Object> toDict() {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("grantor_nid", grantorNid);
-        m.put("grantee_ca",  granteeCa);
-        m.put("trust_scope", trustScope);
-        m.put("nodes",       nodes);
-        m.put("expires_at",  expiresAt);
-        m.put("signature",   signature);
+        Map<String, Object> m = unsignedDict();
+        m.put("signature", signature);
         return m;
     }
 
     /** Return the toDict representation without the signature, for signing. */
     public Map<String, Object> unsignedDict() {
-        Map<String, Object> d = toDict();
-        d.remove("signature");
-        return d;
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("frame",       "0x21");
+        m.put("grantor_nid", grantorNid);
+        m.put("grantee_ca",  granteeCa);
+        m.put("trust_scope", trustScope);
+        m.put("nodes",       nodes);
+        m.put("issued_at",   issuedAt);
+        m.put("expires_at",  expiresAt);
+        m.put("serial",      serial);
+        m.put("signer_nid",  signerNid);
+        return m;
     }
 
     @SuppressWarnings("unchecked")
     public static TrustFrame fromDict(Map<String, Object> d) {
         return new TrustFrame(
-            (String)       d.get("grantor_nid"),
-            (String)       d.get("grantee_ca"),
-            (List<String>) d.get("trust_scope"),
-            (List<String>) d.get("nodes"),
+            (String)       first(d, "grantor_nid", "issuer_nid"),
+            (String)       first(d, "grantee_ca", "subject_nid"),
+            (List<String>) first(d, "trust_scope", "scopes"),
+            (List<String>) d.getOrDefault("nodes", List.of()),
+            (String)       d.getOrDefault("issued_at", ""),
             (String)       d.get("expires_at"),
+            (String)       d.getOrDefault("serial", ""),
+            (String)       first(d, "signer_nid", "grantor_nid", "issuer_nid"),
             (String)       d.get("signature")
         );
+    }
+
+    private static Object first(Map<String, Object> d, String... keys) {
+        for (String key : keys) {
+            if (d.containsKey(key)) return d.get(key);
+        }
+        return null;
     }
 }

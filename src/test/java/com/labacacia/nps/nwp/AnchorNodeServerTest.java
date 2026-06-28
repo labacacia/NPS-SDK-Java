@@ -92,7 +92,7 @@ class AnchorNodeServerTest {
         var o = baseOpts();
         o.displayName = "Svc";
         o.cgnLimit = 500;
-        o.trustAnchors = List.of("urn:nps:ca:root");
+        o.trustAnchors = List.of("urn:nps:org:root");
         var policy = new ReputationPolicy(true, List.of("https://log"), "anonymous", 300, 3600, "allow",
             List.of(), List.of(), List.of(new ReputationPolicyRule("*", ">=critical")));
         o.reputationPolicy = policy;
@@ -107,7 +107,7 @@ class AnchorNodeServerTest {
         assertEquals("nip-cert", ((Map<?, ?>) m.get("auth")).get("identity_type"));
         assertEquals(500, ((Map<?, ?>) m.get("token_budget")).get("cgn_limit"));
         assertEquals(List.of("https://log"), ((Map<?, ?>) m.get("reputation_policy")).get("log_sources"));
-        assertEquals(List.of("urn:nps:ca:root"), m.get("trust_anchors"));
+        assertEquals(List.of("urn:nps:org:root"), m.get("trust_anchors"));
     }
 
     @Test
