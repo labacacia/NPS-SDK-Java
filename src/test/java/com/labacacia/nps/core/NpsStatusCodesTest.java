@@ -193,6 +193,12 @@ class NpsStatusCodesTest {
             NwpErrorCodes.NWP_MANIFEST_NODE_TYPE_UNKNOWN,
             NwpErrorCodes.NWP_RATE_LIMIT_EXCEEDED,
             NwpErrorCodes.NWP_RESERVED_TYPE_UNSUPPORTED,
+            NwpErrorCodes.NWP_HTTP_ORIGIN_FORBIDDEN,
+            NwpErrorCodes.NWP_HTTP_CONTENT_TYPE_UNSUPPORTED,
+            NwpErrorCodes.NWP_HTTP_ACCEPT_UNSATISFIABLE,
+            NwpErrorCodes.NWP_HTTP_REQUEST_ID_MISMATCH,
+            NwpErrorCodes.NWP_HTTP_FRAME_BODY_MALFORMED,
+            NwpErrorCodes.NWP_CAPABILITY_ADVERTISED_UNIMPLEMENTED,
             NwpErrorCodes.NWP_TOPOLOGY_UNAUTHORIZED,
             NwpErrorCodes.NWP_TOPOLOGY_UNSUPPORTED_SCOPE,
             NwpErrorCodes.NWP_TOPOLOGY_DEPTH_UNSUPPORTED,
@@ -214,6 +220,18 @@ class NpsStatusCodesTest {
             NwpErrorCodes.NWP_TO_NPS_STATUS.get(NwpErrorCodes.NWP_RESERVED_TYPE_UNSUPPORTED));
         assertEquals(NpsStatusCodes.NPS_CLIENT_RATE_LIMITED,
             NwpErrorCodes.NWP_TO_NPS_STATUS.get(NwpErrorCodes.NWP_REPUTATION_THROTTLED));
+        assertEquals(NpsStatusCodes.NPS_AUTH_FORBIDDEN,
+            NwpErrorCodes.NWP_TO_NPS_STATUS.get(NwpErrorCodes.NWP_HTTP_ORIGIN_FORBIDDEN));
+        assertEquals(NpsStatusCodes.NPS_CLIENT_BAD_FRAME,
+            NwpErrorCodes.NWP_TO_NPS_STATUS.get(NwpErrorCodes.NWP_HTTP_CONTENT_TYPE_UNSUPPORTED));
+        assertEquals(NpsStatusCodes.NPS_CLIENT_BAD_PARAM,
+            NwpErrorCodes.NWP_TO_NPS_STATUS.get(NwpErrorCodes.NWP_HTTP_ACCEPT_UNSATISFIABLE));
+        assertEquals(NpsStatusCodes.NPS_CLIENT_BAD_PARAM,
+            NwpErrorCodes.NWP_TO_NPS_STATUS.get(NwpErrorCodes.NWP_HTTP_REQUEST_ID_MISMATCH));
+        assertEquals(NpsStatusCodes.NPS_CLIENT_BAD_FRAME,
+            NwpErrorCodes.NWP_TO_NPS_STATUS.get(NwpErrorCodes.NWP_HTTP_FRAME_BODY_MALFORMED));
+        assertEquals(NpsStatusCodes.NPS_SERVER_UNSUPPORTED,
+            NwpErrorCodes.NWP_TO_NPS_STATUS.get(NwpErrorCodes.NWP_CAPABILITY_ADVERTISED_UNIMPLEMENTED));
     }
 
     // ── NIP error codes ───────────────────────────────────────────────────────

@@ -6,7 +6,7 @@ import java.util.Map;
 
 /**
  * NPS native status-code constants and HTTP mapping.
- * Mirror of {@code spec/status-codes.md} (version 0.4).
+ * Mirror of {@code spec/status-codes.md} (version 0.5).
  *
  * <p>Values are the canonical wire strings; consumers MUST compare by string equality.
  * In native mode, status codes are carried directly inside NCP ErrorFrames.
