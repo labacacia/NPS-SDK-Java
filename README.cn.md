@@ -2,7 +2,7 @@
 
 # NPS Java SDK (`nps-java`)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](../../LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.15-orange.svg)](../../CHANGELOG.cn.md)
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.16-orange.svg)](../../CHANGELOG.cn.md)
 [![NCP](https://img.shields.io/badge/NCP-v0.9-5b8cff.svg)]()
 [![NWP](https://img.shields.io/badge/NWP-v0.14-4af0b0.svg)]()
 [![NIP](https://img.shields.io/badge/NIP-v0.10-7b61ff.svg)]()
@@ -15,7 +15,7 @@
 
 ## 状态
 
-**v1.0.0-alpha.15 —— RFC-0002 跨 SDK 端口波（首棒语言）**
+**v1.0.0-alpha.16 —— RFC-0002 跨 SDK 端口波（首棒语言）**
 
 覆盖 NCP + NWP + NIP + NDP + NOP 五个协议，加完整 **NPS-RFC-0002** X.509 + ACME `agent-01` NID 证书原语（`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`）。
 
@@ -46,7 +46,7 @@ Alpha.14 候选新增：远程 NIP CA 类型化客户端（`NipCaClient`）、na
 
 | Package | 说明 |
 |---------|------|
-| `com.labacacia.nps.core` | 帧头、编解码器（Tier-1 JSON / Tier-2 MsgPack）、帧注册表、anchor 缓存、异常 |
+| `com.labacacia.nps.core` | 帧头、编解码器（Tier-1 JSON / Tier-2 MsgPack / Tier-3 BinaryVector）、帧注册表、anchor 缓存、异常 |
 | `com.labacacia.nps.ncp`  | NCP 帧：`AnchorFrame`、`DiffFrame`、`StreamFrame`、`CapsFrame`、`HelloFrame`、`ErrorFrame` |
 | `com.labacacia.nps.nwp`  | NWP 帧：`QueryFrame`、`ActionFrame`、`AsyncActionResponse`；`NwpClient`（HTTP）；`NwpNativeNodeServer` |
 | `com.labacacia.nps.nip`         | NIP 帧：`IdentFrame`、`TrustFrame`、`RevokeFrame`；`NipIdentity`（Ed25519 密钥管理）；`NipIdentVerifier`（RFC-0002 §8.1 双信任）；`AssuranceLevel`（RFC-0003） |
@@ -179,10 +179,10 @@ var results = NpsConformance.catalogForProfile(NpsConformance.NODE_L1).stream()
 var manifest = NpsConformanceManifest.create(
     NpsConformance.NODE_L1,
     "my-node",
-    "1.0.0-alpha.15",
+    "1.0.0-alpha.16",
     "urn:nps:node:example.com:my-node",
     "labacacia-fixture",
-    "1.0.0-alpha.15",
+    "1.0.0-alpha.16",
     results,
     "ci"
 );
@@ -264,18 +264,20 @@ long delayMs = BackoffStrategy.computeDelayMs(BackoffStrategy.EXPONENTIAL, 1000,
 
 ## 编码
 
-编解码器支持两个 Tier：
+编解码器支持三个 Tier：
 
 | Tier | 枚举 | 说明 |
 |------|------|------|
 | Tier-1 | `EncodingTier.JSON` | 可读 JSON（调试 / 互操作） |
 | Tier-2 | `EncodingTier.MSGPACK` | MsgPack 二进制（默认，约 60% 压缩） |
+| Tier-3 | `EncodingTier.BINARY_VECTOR` | `binary_vector.v1`，用于向量密集型帧 |
 
 ```java
 import com.labacacia.nps.core.EncodingTier;
 
 byte[] jsonWire    = codec.encode(frame, EncodingTier.JSON);
 byte[] msgpackWire = codec.encode(frame, EncodingTier.MSGPACK); // 默认
+byte[] vectorWire  = codec.encode(frame, EncodingTier.BINARY_VECTOR);
 ```
 
 ## Anchor 缓存

@@ -2,7 +2,7 @@ English | [中文版](./README.cn.md)
 
 # NPS Java SDK (`nps-java`)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](../../LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.15-orange.svg)](../../CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.16-orange.svg)](../../CHANGELOG.md)
 [![NCP](https://img.shields.io/badge/NCP-v0.9-5b8cff.svg)]()
 [![NWP](https://img.shields.io/badge/NWP-v0.14-4af0b0.svg)]()
 [![NIP](https://img.shields.io/badge/NIP-v0.10-7b61ff.svg)]()
@@ -15,7 +15,7 @@ Package group: `com.labacacia.nps` | Java 21+ | Gradle 8+
 
 ## Status
 
-**v1.0.0-alpha.15 — RFC-0002 cross-SDK port (lead language)**
+**v1.0.0-alpha.16 — RFC-0002 cross-SDK port (lead language)**
 
 Covers all five NPS protocols: NCP + NWP + NIP + NDP + NOP, plus full **NPS-RFC-0002** X.509 + ACME `agent-01` NID certificate primitives (`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`).
 
@@ -46,7 +46,7 @@ Alpha.15 additions: typed remote NIP CA client (`NipCaClient`), native-mode NWP 
 
 | Package | Description |
 |---------|-------------|
-| `com.labacacia.nps.core` | Frame header, codec (Tier-1 JSON / Tier-2 MsgPack), frame registry, anchor cache, exceptions |
+| `com.labacacia.nps.core` | Frame header, codec (Tier-1 JSON / Tier-2 MsgPack / Tier-3 BinaryVector), frame registry, anchor cache, exceptions |
 | `com.labacacia.nps.ncp`  | NCP frames: `AnchorFrame`, `DiffFrame`, `StreamFrame`, `CapsFrame`, `HelloFrame`, `ErrorFrame` |
 | `com.labacacia.nps.nwp`  | NWP frames: `QueryFrame`, `ActionFrame`, `AsyncActionResponse`; `NwpClient` (HTTP); `NwpNativeNodeServer` |
 | `com.labacacia.nps.nip`         | NIP frames: `IdentFrame`, `TrustFrame`, `RevokeFrame`; `NipIdentity` (Ed25519 key management); `NipIdentVerifier` (RFC-0002 §8.1 dual-trust); `AssuranceLevel` (RFC-0003) |
@@ -179,10 +179,10 @@ var results = NpsConformance.catalogForProfile(NpsConformance.NODE_L1).stream()
 var manifest = NpsConformanceManifest.create(
     NpsConformance.NODE_L1,
     "my-node",
-    "1.0.0-alpha.15",
+    "1.0.0-alpha.16",
     "urn:nps:node:example.com:my-node",
     "labacacia-fixture",
-    "1.0.0-alpha.15",
+    "1.0.0-alpha.16",
     results,
     "ci"
 );
@@ -264,18 +264,20 @@ long delayMs = BackoffStrategy.computeDelayMs(BackoffStrategy.EXPONENTIAL, 1000,
 
 ## Encoding
 
-The codec supports two encoding tiers:
+The codec supports three encoding tiers:
 
 | Tier | Enum | Description |
 |------|------|-------------|
 | Tier-1 | `EncodingTier.JSON` | Human-readable JSON (debug, interop) |
 | Tier-2 | `EncodingTier.MSGPACK` | MsgPack binary (default, ~60% smaller) |
+| Tier-3 | `EncodingTier.BINARY_VECTOR` | `binary_vector.v1` for vector-heavy frames |
 
 ```java
 import com.labacacia.nps.core.EncodingTier;
 
 byte[] jsonWire    = codec.encode(frame, EncodingTier.JSON);
 byte[] msgpackWire = codec.encode(frame, EncodingTier.MSGPACK); // default
+byte[] vectorWire  = codec.encode(frame, EncodingTier.BINARY_VECTOR);
 ```
 
 ## Anchor Cache
