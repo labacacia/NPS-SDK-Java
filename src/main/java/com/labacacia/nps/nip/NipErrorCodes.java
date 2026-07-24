@@ -65,6 +65,12 @@ public interface NipErrorCodes {
     String CA_JWS_EXPIRED            = "NIP-CA-JWS-EXPIRED";
     String CERT_PARENT_REVOKED       = "NIP-CERT-PARENT-REVOKED";
 
+    // ── NPS-CR-0005 (RA enrollment tiers) ───────────────────────────────────
+    String RA_TOKEN_INVALID          = "NIP-RA-TOKEN-INVALID";
+    String RA_TOKEN_EXPIRED          = "NIP-RA-TOKEN-EXPIRED";
+    String RA_NID_NOT_ALLOWED        = "NIP-RA-NID-NOT-ALLOWED";
+    String RA_PENDING_REJECTED       = "NIP-RA-PENDING-REJECTED";
+
     // ── OCSP staple (roadmap) ─────────────────────────────────────────────────
     String OCSP_STAPLE_EXPIRED       = "NIP-OCSP-STAPLE-EXPIRED";
 

@@ -30,10 +30,28 @@ class AnchorFrameCacheTest {
         assertTrue(AnchorFrameCache.computeAnchorId(s).matches("sha256:[0-9a-f]{64}"));
     }
 
-    @Test void computeAnchorIdIsFieldOrderIndependent() {
+    @Test void computeAnchorIdIsFieldOrderSensitive() {
+        // Field order is part of the canonical form (matches .NET reference SDK — NOT sorted).
         var s1 = schema("a", "string", "b", "uint64");
         var s2 = schema("b", "uint64", "a", "string");
-        assertEquals(AnchorFrameCache.computeAnchorId(s1), AnchorFrameCache.computeAnchorId(s2));
+        assertNotEquals(AnchorFrameCache.computeAnchorId(s1), AnchorFrameCache.computeAnchorId(s2));
+    }
+
+    @Test void computeAnchorIdMatchesDotnetGoldenVector() {
+        // Golden vector — MUST match the .NET reference AnchorIdComputer byte-for-byte.
+        // fields = [{name:id,type:uint64,nullable:false},
+        //           {name:label,type:string,semantic:entity.label,nullable:true}]
+        // canonical = {"fields":[{"name":"id","nullable":false,"type":"uint64"},
+        //   {"name":"label","nullable":true,"semantic":"entity.label","type":"string"}]}
+        var fields = List.of(
+            Map.<String, Object>of("name", "id", "type", "uint64", "nullable", false),
+            Map.<String, Object>of("name", "label", "type", "string",
+                                   "semantic", "entity.label", "nullable", true)
+        );
+        var s = Map.<String, Object>of("fields", fields);
+        assertEquals(
+            "sha256:13c2ce4979f67a12d7f859f082deab4bebfc8dd1d3c506234062582ac54bbd1a",
+            AnchorFrameCache.computeAnchorId(s));
     }
 
     @Test void setAndGetRoundtrip() {

@@ -9,8 +9,6 @@ import com.labacacia.nps.ncp.AnchorFrame;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -29,22 +27,49 @@ public final class AnchorFrameCache {
 
     // ── Anchor ID computation ─────────────────────────────────────────────────
 
+    /**
+     * Computes the canonical {@code anchor_id} for a structured FrameSchema, matching the .NET
+     * reference SDK's {@code AnchorIdComputer} (NPS-1 §4.1) byte-for-byte.
+     *
+     * <p>Canonical JSON is RFC 8785 JCS over the STRUCTURED schema:
+     * {@code {"fields":[{"name":..,"nullable":true|false,"semantic":..(omitted if null),"type":..}, ...]}}.
+     * Per-field JCS key order is exactly {@code name < nullable < semantic < type} (ASCII byte
+     * order). Field order is preserved as given (NOT sorted). {@code semantic} is omitted when
+     * null/absent; {@code nullable} defaults to {@code false} when absent. anchor_id =
+     * {@code "sha256:" + lower-hex(sha256(utf8(canonical)))}.
+     */
     public static String computeAnchorId(Map<String, Object> schema) {
         try {
-            // Sort fields by name for deterministic hashing
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> fields =
-                new ArrayList<>((List<Map<String, Object>>) schema.get("fields"));
-            fields.sort(Comparator.comparing(f -> (String) f.get("name")));
+                (List<Map<String, Object>>) schema.get("fields");
+            if (fields == null) fields = List.of();
 
-            StringBuilder sb = new StringBuilder("[");
+            StringBuilder sb = new StringBuilder("{\"fields\":[");
             for (int i = 0; i < fields.size(); i++) {
-                if (i > 0) sb.append(",");
+                if (i > 0) sb.append(',');
                 Map<String, Object> f = fields.get(i);
-                sb.append("{\"name\":\"").append(f.get("name"))
-                  .append("\",\"type\":\"").append(f.get("type")).append("\"}");
+                sb.append('{');
+
+                sb.append("\"name\":");
+                appendJcsString(sb, String.valueOf(f.get("name")));
+
+                Object nullableRaw = f.get("nullable");
+                boolean nullable = nullableRaw instanceof Boolean b && b;
+                sb.append(",\"nullable\":").append(nullable ? "true" : "false");
+
+                Object semantic = f.get("semantic");
+                if (semantic != null) {
+                    sb.append(",\"semantic\":");
+                    appendJcsString(sb, semantic.toString());
+                }
+
+                sb.append(",\"type\":");
+                appendJcsString(sb, String.valueOf(f.get("type")));
+
+                sb.append('}');
             }
-            sb.append("]");
+            sb.append("]}");
 
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(sb.toString().getBytes(StandardCharsets.UTF_8));
@@ -52,6 +77,28 @@ public final class AnchorFrameCache {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 unavailable", e);
         }
+    }
+
+    /** Appends a minimally-escaped JSON string literal (RFC 8259), no HTML escaping. */
+    private static void appendJcsString(StringBuilder sb, String value) {
+        sb.append('"');
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '"'  -> sb.append("\\\"");
+                case '\\' -> sb.append("\\\\");
+                case '\b' -> sb.append("\\b");
+                case '\f' -> sb.append("\\f");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                default   -> {
+                    if (c < 0x20) sb.append(String.format("\\u%04x", (int) c));
+                    else sb.append(c);
+                }
+            }
+        }
+        sb.append('"');
     }
 
     // ── Cache operations ──────────────────────────────────────────────────────

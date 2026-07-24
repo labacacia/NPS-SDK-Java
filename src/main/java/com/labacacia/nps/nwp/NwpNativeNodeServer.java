@@ -80,30 +80,44 @@ public final class NwpNativeNodeServer {
     }
 
     public NpsFrame dispatch(NpsFrame frame) {
+        com.labacacia.nps.telemetry.NwpInstrumentation.FRAMES_PROCESSED.add();
+        com.labacacia.nps.telemetry.Span span =
+            com.labacacia.nps.telemetry.NwpInstrumentation.TRACER.startSpan("nwp.dispatch")
+                .setAttribute("nwp.frame_type", frame.frameType().toString());
+        NpsFrame response;
         try {
             if (frame instanceof QueryFrame query) {
                 if (queryHandler == null) throw new IllegalStateException("No native NWP query handler configured.");
-                return queryHandler.handle(query);
-            }
-            if (frame instanceof ActionFrame action) {
+                response = queryHandler.handle(query);
+            } else if (frame instanceof ActionFrame action) {
                 if (actionHandler == null) throw new IllegalStateException("No native NWP action handler configured.");
                 Object result = actionHandler.handle(action);
-                if (result instanceof NpsFrame npsFrame) return npsFrame;
-                if (result == null) return new CapsFrame(anchorRef, 0, List.of());
-                return new CapsFrame(anchorRef, 1, List.of(toRow(result)));
+                if (result instanceof NpsFrame npsFrame) response = npsFrame;
+                else if (result == null) response = new CapsFrame(anchorRef, 0, List.of());
+                else response = new CapsFrame(anchorRef, 1, List.of(toRow(result)));
+            } else {
+                response = new ErrorFrame(
+                    "NPS-CLIENT-BAD-FRAME",
+                    "NWP-NATIVE-FRAME-UNSUPPORTED",
+                    "Native NWP server does not handle frame type " + frame.frameType() + ".",
+                    null);
             }
-            return new ErrorFrame(
-                "NPS-CLIENT-BAD-FRAME",
-                "NWP-NATIVE-FRAME-UNSUPPORTED",
-                "Native NWP server does not handle frame type " + frame.frameType() + ".",
-                null);
         } catch (Exception ex) {
-            return new ErrorFrame(
+            response = new ErrorFrame(
                 "NPS-SERVER-INTERNAL",
                 "NWP-NATIVE-DISPATCH-FAILED",
                 ex.getMessage(),
                 null);
         }
+        if (response instanceof ErrorFrame) {
+            com.labacacia.nps.telemetry.NwpInstrumentation.FRAME_ERRORS.add();
+            span.setError("dispatch returned error frame");
+        } else {
+            span.setOk();
+        }
+        span.close();
+        com.labacacia.nps.telemetry.NwpInstrumentation.FRAME_DURATION_MS.record(span.durationMillis());
+        return response;
     }
 
     public byte[] dispatchWire(byte[] wire) {

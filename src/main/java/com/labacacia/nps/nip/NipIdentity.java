@@ -142,6 +142,9 @@ public final class NipIdentity {
 
     public PublicKey pubKey() { return pubKey; }
 
+    /** CA/service Ed25519 private key — used by the in-process CA service library. */
+    public PrivateKey privateKey() { return privKey; }
+
     // ── Internals ─────────────────────────────────────────────────────────────
 
     private static byte[] canonical(Map<String, Object> payload) {
