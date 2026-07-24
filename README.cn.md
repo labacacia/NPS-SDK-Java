@@ -21,6 +21,16 @@
 
 Alpha.14 候选新增：远程 NIP CA 类型化客户端（`NipCaClient`）、native-mode NWP 服务端 helper（`NwpNativeNodeServer`）和 TC-N1/TC-N2 一致性 manifest helper（`com.labacacia.nps.conformance`）。
 
+## main 分支未发布内容
+
+`main` 分支额外携带 **alpha.16 周期的服务端面 parity 移植**（尚未进入任何已发布包；随下一个套件版本发布）：
+
+- **NOP 编排引擎** —— DAG 校验器、条件求值器、输入映射、结果聚合、任务存储、Worker 客户端、回调校验、instrumentation
+- **NCP 原生模式传输** —— server、session、client、帧 IO、握手 caps、编码策略、patch 格式
+- **NIP CA 服务** —— CA router + RA 准入模型、SQL CA store、TrustFrame 校验器、完整六步 §7 `VerifyFull` 验证器
+- **NWP 服务端面**扩展（memory/complex node 服务）
+- **Daemon observability**（health / metrics / logging / shutdown）与 **telemetry**
+
 ## 环境要求
 
 - Java 21+

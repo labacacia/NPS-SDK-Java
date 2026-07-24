@@ -21,6 +21,20 @@ Covers all five NPS protocols: NCP + NWP + NIP + NDP + NOP, plus full **NPS-RFC-
 
 Alpha.15 additions: typed remote NIP CA client (`NipCaClient`), native-mode NWP serving helper (`NwpNativeNodeServer`), and TC-N1/TC-N2 conformance manifest helpers (`com.labacacia.nps.conformance`).
 
+## Unreleased on `main`
+
+The `main` branch additionally carries the **alpha.16-cycle server-surface parity wave**
+(not yet in any published package; ships with the next suite release):
+
+- **NOP orchestration engine** — DAG validator, condition evaluator, input mapper,
+  result aggregator, task store, worker client, callback validator, instrumentation
+- **NCP native-mode transport** — server, session, client, frame IO, handshake caps,
+  encoding policy, patch format
+- **NIP CA service** — CA router + RA admission model, SQL-backed CA store,
+  TrustFrame validator, full six-step §7 `VerifyFull` verifier
+- **NWP server surface** extensions (memory/complex node serving)
+- **Daemon observability** (health / metrics / logging / shutdown) and **telemetry**
+
 ## Requirements
 
 - Java 21+
