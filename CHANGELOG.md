@@ -8,6 +8,22 @@ Until NPS reaches v1.0 stable, every repository in the suite is synchronized to 
 
 ---
 
+## [1.0.0-alpha.17] — Unreleased
+
+### Added
+
+- Port the reference server surface into the Java SDK: NCP native transport, NWP action/complex/memory nodes and bidirectional bridges, NIP CA services and full verification, NOP orchestration, daemon observability, and telemetry.
+
+### Changed
+
+- Declare the JUnit platform launcher explicitly for Gradle 9 compatibility and enable compiler lint checks.
+
+## [1.0.0-alpha.16] — 2026-07-23
+
+### Changed
+
+- Suite-wide alpha.16 source synchronization and protocol compatibility update.
+
 ## [1.0.0-alpha.15] — 2026-06-28
 
 ### Changed

@@ -151,6 +151,7 @@ class NpsStatusCodesTest {
     // ── NWP error codes ───────────────────────────────────────────────────────
 
     @Test
+    @SuppressWarnings("deprecation")
     void nwpErrorCodesMapCoversAll47Codes() {
         Set<String> expected = Set.of(
             NwpErrorCodes.NWP_AUTH_NID_SCOPE_VIOLATION,

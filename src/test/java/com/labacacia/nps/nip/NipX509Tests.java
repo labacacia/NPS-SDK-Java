@@ -247,9 +247,10 @@ class NipX509Tests {
             X509Certificate root) throws Exception {
         // Build unsigned dict (matches IdentFrame.unsignedDict order).
         Map<String, Object> unsigned = new HashMap<>();
+        Map<String, Object> metadata = Map.of("issued_by", "test-ca");
         unsigned.put("nid",      subjectNid);
         unsigned.put("pub_key",  "ed25519:" + bytesHex(Ed25519PublicKeys.extractRaw(subjectKp.getPublic())));
-        unsigned.put("metadata", Map.of("issued_by", "test-ca"));
+        unsigned.put("metadata", metadata);
         if (level != null) unsigned.put("assurance_level", level.wire());
 
         // Sign with CA private key (canonicalize → Ed25519).
@@ -266,7 +267,7 @@ class NipX509Tests {
         return new IdentFrame(
             subjectNid,
             (String) unsigned.get("pub_key"),
-            (Map<String, Object>) unsigned.get("metadata"),
+            metadata,
             signatureWire,
             level,
             IdentCertFormat.V2_X509,
