@@ -54,10 +54,10 @@ public final class DelegateFrame implements NpsFrame {
     @Override
     public Map<String, Object> toDict() {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("task_id",               taskId);
+        m.put("parent_task_id",        taskId);
         m.put("subtask_id",            subtaskId);
         m.put("action",                action);
-        m.put("agent_nid",             agentNid);
+        m.put("target_agent_nid",      agentNid);
         m.put("inputs",                inputs);
         m.put("params",                params);
         m.put("idempotency_key",       idempotencyKey);
@@ -68,10 +68,10 @@ public final class DelegateFrame implements NpsFrame {
     @SuppressWarnings("unchecked")
     public static DelegateFrame fromDict(Map<String, Object> d) {
         return new DelegateFrame(
-            (String) d.get("task_id"),
+            (String) d.getOrDefault("parent_task_id", d.get("task_id")),
             (String) d.get("subtask_id"),
             (String) d.get("action"),
-            (String) d.get("agent_nid"),
+            (String) d.getOrDefault("target_agent_nid", d.get("agent_nid")),
             (Map<String,Object>) d.get("inputs"),
             (Map<String,Object>) d.get("params"),
             (String) d.get("idempotency_key"),

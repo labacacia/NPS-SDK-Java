@@ -79,6 +79,23 @@ class NopTest {
         assertNull(out.idempotencyKey());
     }
 
+    // Pin the spec/.NET wire field names (NPS-5 §DelegateFrame); must not regress
+    // to the pre-migration legacy keys.
+    @Test void delegateFrameWireKeys() {
+        var d = new DelegateFrame("pt","st","nwp://x","urn:nps:node:w",null,null,null).toDict();
+        assertTrue(d.containsKey("parent_task_id"),   "must emit 'parent_task_id'");
+        assertTrue(d.containsKey("target_agent_nid"), "must emit 'target_agent_nid'");
+        assertFalse(d.containsKey("agent_nid"),       "must NOT emit legacy 'agent_nid'");
+        assertFalse(d.containsKey("task_id"),         "must NOT emit legacy 'task_id'");
+        // legacy inbound still decodes (backward-compatible)
+        var legacy = new java.util.LinkedHashMap<String,Object>();
+        legacy.put("task_id","pt"); legacy.put("subtask_id","st");
+        legacy.put("action","nwp://x"); legacy.put("agent_nid","urn:nps:node:w");
+        var back = DelegateFrame.fromDict(legacy);
+        assertEquals("pt", back.taskId());
+        assertEquals("urn:nps:node:w", back.agentNid());
+    }
+
     // ── SyncFrame ─────────────────────────────────────────────────────────────
 
     @Test void syncFrameRoundtrip() {
