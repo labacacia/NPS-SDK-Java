@@ -231,6 +231,91 @@ class NipX509Tests {
         assertEquals(3, result.stepFailed());
     }
 
+    // ── NIP v0.12 §7.5 — step 3c wiring in the verifier ──────────────────────
+
+    /** Phase 1–2 default: the checks are advisory, so a would-fail frame still verifies. */
+    @Test
+    void phase3EnforcementOff_FailingFrameStillVerifies() throws Exception {
+        var f = phase3Fixture(null);   // no ocsp_staple at all
+
+        var opts = NipVerifierOptions.builder()
+            .trustedCaPublicKeys(Map.of(f.caNid, f.caPub))
+            .trustedX509Roots(List.of(f.root))
+            .build();   // phase3Enforcement defaults to false
+
+        assertTrue(new NipIdentVerifier(opts).verify(f.frame, f.caNid).valid());
+    }
+
+    /** With the flag on, the unconditional OCSP-staple row becomes a hard failure. */
+    @Test
+    void phase3EnforcementOn_MissingStapleRejectsAtStep3() throws Exception {
+        var f = phase3Fixture(null);
+
+        var opts = NipVerifierOptions.builder()
+            .trustedCaPublicKeys(Map.of(f.caNid, f.caPub))
+            .trustedX509Roots(List.of(f.root))
+            .phase3Enforcement(true)
+            .build();
+
+        var result = new NipIdentVerifier(opts).verify(f.frame, f.caNid);
+        assertFalse(result.valid());
+        assertEquals(NipErrorCodes.OCSP_STAPLE_EXPIRED, result.errorCode());
+        assertEquals(3, result.stepFailed());
+    }
+
+    /** The enforcer is never reached for a frame that is not {@code v2-x509}. */
+    @Test
+    void phase3EnforcementOn_NonV2FrameIsUntouched() throws Exception {
+        var f = phase3Fixture(null);
+        IdentFrame v1 = new IdentFrame(f.frame.nid(), f.frame.pubKey(), f.frame.metadata(),
+            f.frame.signature());   // cert_format null ≡ v1-proprietary
+
+        var opts = NipVerifierOptions.builder()
+            .trustedCaPublicKeys(Map.of(f.caNid, f.caPub))
+            .trustedX509Roots(List.of(f.root))
+            .phase3Enforcement(true)
+            .build();
+
+        assertTrue(new NipIdentVerifier(opts).verify(v1, f.caNid).valid());
+    }
+
+    /** An undecodable {@code cert_chain[0]} under enforcement reports NIP-CERT-FORMAT-INVALID. */
+    @Test
+    void phase3EnforcementOn_MalformedLeafReportsCertFormatInvalid() throws Exception {
+        // A verifier whose chain check passes but whose enforcement decode must fail is not
+        // constructible, so exercise the decode guard directly on the enforcer's decoder.
+        assertThrows(IllegalArgumentException.class,
+            () -> NipPhase3Enforcer.decodeBase64Url("!!!not-base64!!!"));
+    }
+
+    private record Phase3Fixture(String caNid, java.security.PublicKey caPub,
+                                 X509Certificate root, IdentFrame frame) {}
+
+    private static Phase3Fixture phase3Fixture(String ocspStaple) throws Exception {
+        String caNid    = "urn:nps:org:test";
+        String agentNid = "urn:nps:agent:phase3:1";
+
+        KeyPair caKp = generate();
+        X509Certificate root = NipX509Builder.issueRoot(caNid, caKp.getPrivate(),
+            Ed25519PublicKeys.extractRaw(caKp.getPublic()),
+            Instant.now().minus(Duration.ofMinutes(1)),
+            Instant.now().plus(Duration.ofDays(365)), BigInteger.valueOf(1));
+
+        KeyPair agentKp = generate();
+        X509Certificate leaf = NipX509Builder.issueLeaf(agentNid,
+            Ed25519PublicKeys.extractRaw(agentKp.getPublic()), caKp.getPrivate(), caNid,
+            NipX509Builder.LeafRole.AGENT, AssuranceLevel.ANONYMOUS,
+            Instant.now().minus(Duration.ofMinutes(1)),
+            Instant.now().plus(Duration.ofDays(30)), BigInteger.valueOf(2));
+
+        IdentFrame base = buildV2Frame(agentNid, agentKp, caKp, null, leaf, root);
+        IdentFrame frame = new IdentFrame(base.nid(), base.pubKey(), base.metadata(),
+            base.signature(), base.assuranceLevel(), base.certFormat(), base.certChain(),
+            ocspStaple, List.of("memory"), List.of("nwp:query"));
+
+        return new Phase3Fixture(caNid, caKp.getPublic(), root, frame);
+    }
+
     // ── Test helpers ─────────────────────────────────────────────────────────
 
     private static KeyPair generate() throws Exception {
@@ -247,9 +332,10 @@ class NipX509Tests {
             X509Certificate root) throws Exception {
         // Build unsigned dict (matches IdentFrame.unsignedDict order).
         Map<String, Object> unsigned = new HashMap<>();
+        Map<String, Object> metadata = Map.of("issued_by", "test-ca");
         unsigned.put("nid",      subjectNid);
         unsigned.put("pub_key",  "ed25519:" + bytesHex(Ed25519PublicKeys.extractRaw(subjectKp.getPublic())));
-        unsigned.put("metadata", Map.of("issued_by", "test-ca"));
+        unsigned.put("metadata", metadata);
         if (level != null) unsigned.put("assurance_level", level.wire());
 
         // Sign with CA private key (canonicalize → Ed25519).
@@ -266,7 +352,7 @@ class NipX509Tests {
         return new IdentFrame(
             subjectNid,
             (String) unsigned.get("pub_key"),
-            (Map<String, Object>) unsigned.get("metadata"),
+            metadata,
             signatureWire,
             level,
             IdentCertFormat.V2_X509,

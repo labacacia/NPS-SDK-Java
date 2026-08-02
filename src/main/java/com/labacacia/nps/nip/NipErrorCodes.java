@@ -77,6 +77,15 @@ public interface NipErrorCodes {
     // ── NIP v0.10 — node_roles ────────────────────────────────────────────────
     String CERT_NODE_ROLES_MISMATCH  = "NIP-CERT-NODE-ROLES-MISMATCH";
 
+    // ── NIP v0.12 — §7.5 Phase-3 enforcement ─────────────────────────────────
+    /**
+     * The IdentFrame claims capabilities the CA did not attest in the leaf's
+     * {@code id-nps-capabilities} extension. Note the deliberate asymmetry with its
+     * sibling {@link #CERT_NODE_ROLES_MISMATCH}: this maps to {@code NPS-AUTH-FORBIDDEN},
+     * that one to {@code NPS-CLIENT-BAD-FRAME}.
+     */
+    String CERT_CAPABILITIES_EXCEEDED = "NIP-CERT-CAPABILITIES-EXCEEDED";
+
     // ── NIP error → NPS status mapping ───────────────────────────────────────
 
     /**
@@ -122,6 +131,7 @@ public interface NipErrorCodes {
         Map.entry(CA_JWS_EXPIRED,                   NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
         Map.entry(CERT_PARENT_REVOKED,              NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
         Map.entry(OCSP_STAPLE_EXPIRED,              NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
-        Map.entry(CERT_NODE_ROLES_MISMATCH,         NpsStatusCodes.NPS_AUTH_FORBIDDEN)
+        Map.entry(CERT_NODE_ROLES_MISMATCH,         NpsStatusCodes.NPS_CLIENT_BAD_FRAME),
+        Map.entry(CERT_CAPABILITIES_EXCEEDED,       NpsStatusCodes.NPS_AUTH_FORBIDDEN)
     );
 }

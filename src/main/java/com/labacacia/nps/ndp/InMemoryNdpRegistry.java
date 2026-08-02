@@ -9,8 +9,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongSupplier;
 
-/** Thread-safe in-memory NDP node registry with TTL eviction. */
-public final class InMemoryNdpRegistry {
+/**
+ * Thread-safe in-memory NDP node registry with TTL eviction.
+ *
+ * <p>Implements {@link NdpRegistry}, so it inherits the CR-0009 highest-epoch
+ * cluster-resolution rule ({@link NdpRegistry#resolveCluster}) unchanged.</p>
+ */
+public final class InMemoryNdpRegistry implements NdpRegistry {
 
     private static final int EPHEMERAL_TTL_CAP_S = 60;
 
@@ -159,6 +164,7 @@ public final class InMemoryNdpRegistry {
         return resolveViaDns(target, new SystemDnsTxtLookup());
     }
 
+    @Override
     public List<AnnounceFrame> getAll() {
         long now = clock.getAsLong();
         List<AnnounceFrame> result = new ArrayList<>();

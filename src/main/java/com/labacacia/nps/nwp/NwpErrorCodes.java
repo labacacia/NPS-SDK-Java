@@ -82,11 +82,25 @@ public interface NwpErrorCodes {
     String NWP_HTTP_ACCEPT_UNSATISFIABLE      = "NWP-HTTP-ACCEPT-UNSATISFIABLE";
     String NWP_HTTP_REQUEST_ID_MISMATCH       = "NWP-HTTP-REQUEST-ID-MISMATCH";
     String NWP_HTTP_FRAME_BODY_MALFORMED      = "NWP-HTTP-FRAME-BODY-MALFORMED";
+    String NWP_HTTP_BODY_TOO_LARGE            = "NWP-HTTP-BODY-TOO-LARGE";
     String NWP_CAPABILITY_ADVERTISED_UNIMPLEMENTED = "NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED";
     String NWP_TOPOLOGY_UNAUTHORIZED          = "NWP-TOPOLOGY-UNAUTHORIZED";
     String NWP_TOPOLOGY_UNSUPPORTED_SCOPE     = "NWP-TOPOLOGY-UNSUPPORTED-SCOPE";
     String NWP_TOPOLOGY_DEPTH_UNSUPPORTED     = "NWP-TOPOLOGY-DEPTH-UNSUPPORTED";
     String NWP_TOPOLOGY_FILTER_UNSUPPORTED    = "NWP-TOPOLOGY-FILTER-UNSUPPORTED";
+
+    // ── Multi-Anchor HA (NPS-CR-0009, NWP v0.18 §12.2) ───────────────────────
+    /**
+     * A topology <em>write</em> arrived at a standby, or at the active owner while it is
+     * in read-only-degraded (quorum-lost) state. Reads are unaffected.
+     */
+    String NWP_ANCHOR_NOT_LEADER    = "NWP-ANCHOR-NOT-LEADER";
+    /**
+     * An inbound frame carried a {@code cluster_epoch} <em>strictly greater</em> than the
+     * receiver's own: the receiver is a superseded leader and self-fences. An equal or
+     * lower inbound epoch is deliberately NOT an error.
+     */
+    String NWP_ANCHOR_EPOCH_FENCED  = "NWP-ANCHOR-EPOCH-FENCED";
 
     // ── NWP error → NPS status mapping ───────────────────────────────────────
 
@@ -139,10 +153,13 @@ public interface NwpErrorCodes {
         Map.entry(NWP_HTTP_ACCEPT_UNSATISFIABLE,   NpsStatusCodes.NPS_CLIENT_BAD_PARAM),
         Map.entry(NWP_HTTP_REQUEST_ID_MISMATCH,    NpsStatusCodes.NPS_CLIENT_BAD_PARAM),
         Map.entry(NWP_HTTP_FRAME_BODY_MALFORMED,   NpsStatusCodes.NPS_CLIENT_BAD_FRAME),
+        Map.entry(NWP_HTTP_BODY_TOO_LARGE,         NpsStatusCodes.NPS_LIMIT_PAYLOAD),
         Map.entry(NWP_CAPABILITY_ADVERTISED_UNIMPLEMENTED, NpsStatusCodes.NPS_SERVER_UNSUPPORTED),
         Map.entry(NWP_TOPOLOGY_UNAUTHORIZED,       NpsStatusCodes.NPS_AUTH_FORBIDDEN),
         Map.entry(NWP_TOPOLOGY_UNSUPPORTED_SCOPE,  NpsStatusCodes.NPS_CLIENT_BAD_PARAM),
         Map.entry(NWP_TOPOLOGY_DEPTH_UNSUPPORTED,  NpsStatusCodes.NPS_CLIENT_BAD_PARAM),
-        Map.entry(NWP_TOPOLOGY_FILTER_UNSUPPORTED, NpsStatusCodes.NPS_CLIENT_BAD_PARAM)
+        Map.entry(NWP_TOPOLOGY_FILTER_UNSUPPORTED, NpsStatusCodes.NPS_CLIENT_BAD_PARAM),
+        Map.entry(NWP_ANCHOR_NOT_LEADER,           NpsStatusCodes.NPS_CLIENT_CONFLICT),
+        Map.entry(NWP_ANCHOR_EPOCH_FENCED,         NpsStatusCodes.NPS_CLIENT_CONFLICT)
     );
 }

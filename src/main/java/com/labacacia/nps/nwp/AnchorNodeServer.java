@@ -154,16 +154,6 @@ public final class AnchorNodeServer implements HttpHandler {
         }
     }
 
-    static final class TopologyProtocolException extends RuntimeException {
-        final String nwpErrorCode;
-        final String npsStatus;
-        TopologyProtocolException(String nwpErrorCode, String npsStatus, String message) {
-            super(message);
-            this.nwpErrorCode = nwpErrorCode;
-            this.npsStatus = npsStatus;
-        }
-    }
-
     /**
      * Reputation policy evaluator seam. The reputation types ship as client-side parity
      * ({@link ReputationPolicy} / {@link ReputationPolicyRule} / {@link ReputationDecision} /
@@ -640,8 +630,9 @@ public final class AnchorNodeServer implements HttpHandler {
     }
 
     private void writeTopologyError(HttpExchange ex, TopologyProtocolException e) throws IOException {
-        int status = "NPS-AUTH-FORBIDDEN".equals(e.npsStatus) ? 403 : 400;
-        writeError(ex, status, e.npsStatus, e.nwpErrorCode, e.getMessage(), null, null);
+        // Status comes from the canonical NPS-status → HTTP map so that CR-0009's
+        // NPS-CLIENT-CONFLICT faults render as 409 rather than a hardcoded 400.
+        writeError(ex, e.httpStatus(), e.npsStatus, e.nwpErrorCode, e.getMessage(), null, null);
     }
 
     // ── Manifest ───────────────────────────────────────────────────────────────────

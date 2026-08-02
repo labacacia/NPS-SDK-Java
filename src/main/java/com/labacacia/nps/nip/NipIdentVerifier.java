@@ -207,6 +207,9 @@ public final class NipIdentVerifier {
             if (!x509.valid()) {
                 return NipIdentVerifyResult.fail(step, x509.errorCode(), x509.message());
             }
+            if (options.phase3Enforcement()) {
+                return NipPhase3Enforcer.enforce(frame, x509.leaf(), Instant.now());
+            }
         }
         return NipIdentVerifyResult.ok();
     }
@@ -215,36 +218,71 @@ public final class NipIdentVerifier {
 
     private NipIdentVerifyResult checkRevocation(IdentFrame frame) {
         String serial = str(meta(frame, "serial"));
+        NipRevocationPolicy evaluation = new NipRevocationPolicy(
+            options.revocationMode(), options.ocspFailOpen());
 
         // 1) Local CRL check first (fast, no network).
-        if (serial != null && options.localRevokedSerials() != null
-                && options.localRevokedSerials().contains(serial)) {
-            return NipIdentVerifyResult.fail(4, NipErrorCodes.CERT_REVOKED,
-                "Certificate serial " + serial + " is in the local revocation list.");
+        if (options.localRevokedSerials() != null) {
+            NipIdentVerifyResult result = evaluation.observe(
+                NipRevocationPolicy.Source.LOCAL_CRL,
+                serial != null && options.localRevokedSerials().contains(serial)
+                    ? NipRevocationPolicy.Outcome.REVOKED
+                    : NipRevocationPolicy.Outcome.GOOD);
+            if (result != null) return result;
         }
 
         // 2) Pluggable live revocation callback.
         if (options.revocationCheck() != null) {
-            NipIdentVerifyResult callbackResult = options.revocationCheck().check(frame);
-            if (callbackResult != null && !callbackResult.valid()) return callbackResult;
+            NipIdentVerifyResult result;
+            try {
+                NipIdentVerifyResult callbackResult =
+                    options.revocationCheck().check(frame);
+                if (callbackResult != null && !callbackResult.valid()) {
+                    return callbackResult;
+                }
+                result = evaluation.observe(
+                    NipRevocationPolicy.Source.CALLBACK,
+                    NipRevocationPolicy.Outcome.GOOD);
+            } catch (RuntimeException ex) {
+                result = evaluation.observe(
+                    NipRevocationPolicy.Source.CALLBACK,
+                    NipRevocationPolicy.Outcome.UNAVAILABLE);
+            }
+            if (result != null) return result;
         }
 
         // 3) Revocation store lookup by serial.
-        if (options.revocationStore() != null && serial != null) {
-            NipRevocationStore.Record record = options.revocationStore().getBySerial(serial);
-            if (record != null && record.revokedAt() != null) {
-                return NipIdentVerifyResult.fail(4, NipErrorCodes.CERT_REVOKED,
-                    "Certificate serial " + serial + " was revoked at " + record.revokedAt()
-                    + ": " + record.revokeReason());
+        if (options.revocationStore() != null) {
+            NipIdentVerifyResult result;
+            try {
+                if (serial == null) throw new IllegalStateException(
+                    "Certificate serial is missing.");
+                NipRevocationStore.Record record =
+                    options.revocationStore().getBySerial(serial);
+                result = evaluation.observe(
+                    NipRevocationPolicy.Source.CA_STORE,
+                    record != null && record.revokedAt() != null
+                        ? NipRevocationPolicy.Outcome.REVOKED
+                        : NipRevocationPolicy.Outcome.GOOD);
+            } catch (RuntimeException ex) {
+                result = evaluation.observe(
+                    NipRevocationPolicy.Source.CA_STORE,
+                    NipRevocationPolicy.Outcome.UNAVAILABLE);
             }
+            if (result != null) return result;
         }
 
         // 4) OCSP call to the CA server (optional).
         if (options.ocspUrl() != null) {
-            return ocspCheck(frame.nid());
+            NipIdentVerifyResult ocsp = ocspCheck(frame.nid());
+            if (!ocsp.valid()) return ocsp;
+            NipIdentVerifyResult result = evaluation.observe(
+                NipRevocationPolicy.Source.OCSP,
+                NipRevocationPolicy.Outcome.GOOD);
+            if (result != null) return result;
         }
 
-        return NipIdentVerifyResult.ok(); // pass-through when revocation is unconfigured
+        return evaluation.complete();
     }
 
     private NipIdentVerifyResult ocspCheck(String nid) {
@@ -264,6 +302,7 @@ public final class NipIdentVerifier {
             HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
 
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
+                if (options.ocspFailOpen()) return NipIdentVerifyResult.ok();
                 return NipIdentVerifyResult.fail(4, NipErrorCodes.OCSP_UNAVAILABLE,
                     "OCSP endpoint returned " + resp.statusCode() + ".");
             }

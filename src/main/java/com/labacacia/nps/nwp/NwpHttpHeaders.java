@@ -29,6 +29,8 @@ public final class NwpHttpHeaders {
 
     // MIME types
     public static final String MIME_FRAME = "application/nwp-frame";
+    public static final String MIME_LEGACY_FRAME = "application/x-nps-frame";
     public static final String MIME_CAPSULE = "application/nwp-capsule";
+    public static final String MIME_ERROR = "application/nwp-error+json";
     public static final String MIME_MANIFEST = "application/nwp-manifest+json";
 }

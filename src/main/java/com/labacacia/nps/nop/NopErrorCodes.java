@@ -48,12 +48,31 @@ public interface NopErrorCodes {
     // ── Webhook HMAC (NOP v0.6 roadmap) ──────────────────────────────────────
     /** Webhook callback is missing the required HMAC signature header (NOP v0.6). */
     String NOP_CALLBACK_HMAC_MISSING = "NOP-CALLBACK-HMAC-MISSING";
+    String NOP_CALLBACK_INVALID = "NOP-CALLBACK-INVALID";
+    String NOP_CALLBACK_HMAC_INVALID = "NOP-CALLBACK-HMAC-INVALID";
+
+    // ── NPS-CR-0007 L3 runtime ───────────────────────────────────────────────
+    String NOP_SPAWN_SPEC_INVALID = "NOP-SPAWN-SPEC-INVALID";
+    String NOP_RUNTIME_IDLE_TIMEOUT = "NOP-RUNTIME-IDLE-TIMEOUT";
+    String NOP_RUNTIME_MAX_RUNTIME = "NOP-RUNTIME-MAX-RUNTIME";
 
     // ── Result TTL / NAK (NOP v0.7) ──────────────────────────────────────────
     /** Task result requested after result_ttl_seconds elapsed (NOP v0.7). */
     String NOP_TASK_RESULT_EXPIRED      = "NOP-TASK-RESULT-EXPIRED";
     /** NAK retransmission requested for a frame no longer in sender's buffer (NOP v0.7). */
     String NOP_STREAM_NAK_UNRESOLVABLE  = "NOP-STREAM-NAK-UNRESOLVABLE";
+
+    // ── Task-claim lease (NPS-CR-0007 §4.2; reused by NPS-CR-0009) ───────────
+    /**
+     * TaskFrame is already held by a live {@code nps-runner} lease, or a renewal arrived
+     * after the lease expired and was reclaimed.
+     *
+     * <p>NPS-CR-0009 tie-in: an Anchor failover does <em>not</em> invalidate a task lease
+     * — the lease keys on {@code runner_nid}, not the Anchor — so a delegation that
+     * re-resolves to the successor MUST carry the same {@code dedup_key} to stop the
+     * successor re-executing a side-effect-bearing node.</p>
+     */
+    String NOP_CLAIM_CONFLICT           = "NOP-CLAIM-CONFLICT";
 
     // ── NOP error → NPS status mapping ───────────────────────────────────────
 
@@ -84,7 +103,13 @@ public interface NopErrorCodes {
         Map.entry(NOP_COMPENSATION_PARTIAL_FAILED, NpsStatusCodes.NPS_CLIENT_UNPROCESSABLE),
         Map.entry(NOP_COMPENSATION_NOT_SUPPORTED, NpsStatusCodes.NPS_CLIENT_UNPROCESSABLE),
         Map.entry(NOP_CALLBACK_HMAC_MISSING,    NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
+        Map.entry(NOP_CALLBACK_INVALID,         NpsStatusCodes.NPS_CLIENT_BAD_PARAM),
+        Map.entry(NOP_CALLBACK_HMAC_INVALID,    NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
+        Map.entry(NOP_SPAWN_SPEC_INVALID,       NpsStatusCodes.NPS_CLIENT_BAD_PARAM),
+        Map.entry(NOP_RUNTIME_IDLE_TIMEOUT,     NpsStatusCodes.NPS_SERVER_TIMEOUT),
+        Map.entry(NOP_RUNTIME_MAX_RUNTIME,      NpsStatusCodes.NPS_SERVER_TIMEOUT),
         Map.entry(NOP_TASK_RESULT_EXPIRED,      NpsStatusCodes.NPS_CLIENT_NOT_FOUND),
-        Map.entry(NOP_STREAM_NAK_UNRESOLVABLE,  NpsStatusCodes.NPS_STREAM_SEQ_GAP)
+        Map.entry(NOP_STREAM_NAK_UNRESOLVABLE,  NpsStatusCodes.NPS_STREAM_SEQ_GAP),
+        Map.entry(NOP_CLAIM_CONFLICT,           NpsStatusCodes.NPS_CLIENT_CONFLICT)
     );
 }

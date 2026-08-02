@@ -30,9 +30,19 @@ public final class NpsX509Oids {
     // ── Custom extensions ────────────────────────────────────────────────────
     public static final ASN1ObjectIdentifier NID_ASSURANCE_LEVEL =
         new ASN1ObjectIdentifier(EXTENSION_ARC + ".1");
-    // Reserved per NPS-CR-0004; no consumer wired in yet.
+    /**
+     * {@code id-nps-node-roles} — {@code SEQUENCE OF UTF8String}, the node roles the CA
+     * attested. Consumed by NIP v0.12 §7.5 Phase-3 enforcement.
+     */
     public static final ASN1ObjectIdentifier ID_NPS_NODE_ROLES =
         new ASN1ObjectIdentifier(EXTENSION_ARC + ".2");
+
+    /**
+     * {@code id-nps-capabilities} — {@code SEQUENCE OF UTF8String}, the capabilities the
+     * CA attested. Consumed by NIP v0.12 §7.5 Phase-3 enforcement.
+     */
+    public static final ASN1ObjectIdentifier ID_NPS_CAPABILITIES =
+        new ASN1ObjectIdentifier(EXTENSION_ARC + ".3");
 
     // ── Ed25519 algorithm OID per RFC 8410 ───────────────────────────────────
     public static final ASN1ObjectIdentifier ED25519 =

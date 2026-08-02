@@ -18,6 +18,14 @@ public final class DelegateFrame implements NpsFrame {
     private final Map<String,Object> inputs;              // nullable
     private final Map<String,Object> params;              // nullable
     private final String             idempotencyKey;      // nullable
+    /**
+     * NPS-CR-0009 — optional cluster NID. MUST resolve to the cluster's <em>current
+     * active</em> Anchor (highest {@code cluster_epoch}, NDP §9); on an
+     * {@code anchor_failover}, in-flight delegations MUST re-resolve to
+     * {@code successor_nid} before retry. SSRF guard: MUST be a {@code urn:nps:...} NID,
+     * never a raw URL. Falls back to {@code target_agent_nid} when absent or empty.
+     * See {@link ClusterDelegationResolver}.
+     */
     private final String             targetClusterAnchor; // nullable
 
     public DelegateFrame(String taskId, String subtaskId, String action, String agentNid,
@@ -54,24 +62,26 @@ public final class DelegateFrame implements NpsFrame {
     @Override
     public Map<String, Object> toDict() {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("parent_task_id",        taskId);
+        m.put("task_id",               taskId);
         m.put("subtask_id",            subtaskId);
         m.put("action",                action);
-        m.put("target_agent_nid",      agentNid);
+        m.put("agent_nid",             agentNid);
         m.put("inputs",                inputs);
         m.put("params",                params);
         m.put("idempotency_key",       idempotencyKey);
-        m.put("target_cluster_anchor", targetClusterAnchor);
+        // Optional, conditionally emitted: every other SDK omits the key when unset, and
+        // an explicit `"target_cluster_anchor": null` is a cross-SDK wire divergence.
+        if (targetClusterAnchor != null) m.put("target_cluster_anchor", targetClusterAnchor);
         return m;
     }
 
     @SuppressWarnings("unchecked")
     public static DelegateFrame fromDict(Map<String, Object> d) {
         return new DelegateFrame(
-            (String) d.getOrDefault("parent_task_id", d.get("task_id")),
+            (String) d.get("task_id"),
             (String) d.get("subtask_id"),
             (String) d.get("action"),
-            (String) d.getOrDefault("target_agent_nid", d.get("agent_nid")),
+            (String) d.get("agent_nid"),
             (Map<String,Object>) d.get("inputs"),
             (Map<String,Object>) d.get("params"),
             (String) d.get("idempotency_key"),

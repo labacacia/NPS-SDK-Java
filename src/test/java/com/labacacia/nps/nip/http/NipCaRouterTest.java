@@ -241,6 +241,31 @@ class NipCaRouterTest {
     }
 
     @Test
+    void certificateInventoryRequiresOperatorToken() throws Exception {
+        var o = opts();
+        o.operatorApiKey = "secret";
+        NipCaService ca = svc(o);
+        ca.register("agent", "audit", PUBKEY, List.of(), "{\"nodes\":[\"*\"]}",
+            null);
+        start(new NipCaRouter(o, ca));
+
+        assertEquals(401, get("/v1/certificates").statusCode());
+        var response = client.send(
+            HttpRequest.newBuilder(URI.create(base + "/v1/certificates"))
+                .header("Authorization", "Bearer secret")
+                .GET()
+                .build(),
+            HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, response.statusCode());
+        var body = json(response);
+        var entries = (List<?>) body.get("entries");
+        assertEquals(1, entries.size());
+        assertEquals(
+            "urn:nps:agent:ca.example.com:audit",
+            ((Map<?, ?>) entries.getFirst()).get("nid"));
+    }
+
+    @Test
     void raBootstrapTokenEndpointFlow() throws Exception {
         var o = opts();
         o.enrollmentTier = EnrollmentTier.BOOTSTRAP_TOKEN;

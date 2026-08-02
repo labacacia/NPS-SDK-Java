@@ -70,4 +70,26 @@ final class NipCaClientTest {
         assertEquals("NIP-CA-UNAUTHORIZED", ex.errorCode());
         assertEquals(401, ex.statusCode());
     }
+
+    @Test
+    void getCertificatesSendsBearerAndDecodesInventory() throws Exception {
+        server.createContext("/v1/certificates", exchange -> {
+            assertEquals(
+                "Bearer secret",
+                exchange.getRequestHeaders().getFirst("Authorization"));
+            byte[] response = """
+                {"entries":[{"nid":"urn:nps:agent:example.test:a","entity_type":"agent","serial":"0x1","pub_key":"ed25519:a","capabilities":["nwp:query"],"scope":{"nodes":["*"]},"issued_by":"urn:nps:org:example.test","issued_at":"2026-01-01T00:00:00Z","expires_at":"2026-02-01T00:00:00Z"}]}
+                """.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, response.length);
+            exchange.getResponseBody().write(response);
+            exchange.close();
+        });
+
+        NipCaCertificateList result =
+            new NipCaClient(baseUrl).getCertificates("secret");
+        assertEquals(1, result.entries().size());
+        assertEquals(
+            "urn:nps:agent:example.test:a",
+            result.entries().getFirst().nid());
+    }
 }

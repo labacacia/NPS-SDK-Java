@@ -30,6 +30,11 @@ public final class IdentFrame implements NpsFrame {
     // alpha.13: NIP v0.10 self-declared node-role tags.
     private final List<String>        nodeRoles;    // nullable
 
+    // alpha.17: NIP v0.12 §7.5 Phase-3 enforcement compares these against the leaf's
+    // id-nps-capabilities extension (subset check). Wire-only, like node_roles — the
+    // SDK's v1 signed payload is (nid, pub_key, metadata, [assurance_level]) only.
+    private final List<String>        capabilities; // nullable
+
     /** Backward-compatible constructor — produces a v1-proprietary frame with no assurance level. */
     public IdentFrame(String nid, String pubKey, Map<String,Object> metadata, String signature) {
         this(nid, pubKey, metadata, signature, null, null, null, null, null);
@@ -60,7 +65,7 @@ public final class IdentFrame implements NpsFrame {
         this(nid, pubKey, metadata, signature, assuranceLevel, certFormat, certChain, ocspStaple, null);
     }
 
-    /** Full constructor including alpha.13 node_roles. */
+    /** Constructor including alpha.13 node_roles; {@code capabilities} defaults to null. */
     public IdentFrame(
             String              nid,
             String              pubKey,
@@ -71,6 +76,22 @@ public final class IdentFrame implements NpsFrame {
             List<String>        certChain,
             String              ocspStaple,
             List<String>        nodeRoles) {
+        this(nid, pubKey, metadata, signature, assuranceLevel, certFormat, certChain,
+            ocspStaple, nodeRoles, null);
+    }
+
+    /** Full constructor including the NIP v0.12 Phase-3 {@code capabilities}. */
+    public IdentFrame(
+            String              nid,
+            String              pubKey,
+            Map<String,Object>  metadata,
+            String              signature,
+            AssuranceLevel      assuranceLevel,
+            String              certFormat,
+            List<String>        certChain,
+            String              ocspStaple,
+            List<String>        nodeRoles,
+            List<String>        capabilities) {
         this.nid             = nid;
         this.pubKey          = pubKey;
         this.metadata        = metadata;
@@ -80,6 +101,7 @@ public final class IdentFrame implements NpsFrame {
         this.certChain       = certChain;
         this.ocspStaple      = ocspStaple;
         this.nodeRoles       = nodeRoles;
+        this.capabilities    = capabilities;
     }
 
     @Override public FrameType    frameType()    { return FrameType.IDENT; }
@@ -94,6 +116,7 @@ public final class IdentFrame implements NpsFrame {
     public List<String>        certChain()       { return certChain; }
     public String              ocspStaple()      { return ocspStaple; }
     public List<String>        nodeRoles()       { return nodeRoles; }
+    public List<String>        capabilities()    { return capabilities; }
 
     public Map<String, Object> unsignedDict() {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -113,7 +136,8 @@ public final class IdentFrame implements NpsFrame {
         if (certFormat  != null) m.put("cert_format",  certFormat);
         if (certChain   != null) m.put("cert_chain",   certChain);
         if (ocspStaple  != null) m.put("ocsp_staple",  ocspStaple);
-        if (nodeRoles   != null) m.put("node_roles",   nodeRoles);
+        if (nodeRoles    != null) m.put("node_roles",   nodeRoles);
+        if (capabilities != null) m.put("capabilities", capabilities);
         return m;
     }
 
@@ -127,6 +151,8 @@ public final class IdentFrame implements NpsFrame {
         List<String> certChain = (chain instanceof List<?>) ? (List<String>) chain : null;
         Object roles = d.get("node_roles");
         List<String> nodeRoles = (roles instanceof List<?>) ? (List<String>) roles : null;
+        Object caps = d.get("capabilities");
+        List<String> capabilities = (caps instanceof List<?>) ? (List<String>) caps : null;
 
         return new IdentFrame(
             (String) d.get("nid"),
@@ -137,7 +163,8 @@ public final class IdentFrame implements NpsFrame {
             (String) d.get("cert_format"),
             certChain,
             (String) d.get("ocsp_staple"),
-            nodeRoles
+            nodeRoles,
+            capabilities
         );
     }
 }

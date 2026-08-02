@@ -40,6 +40,8 @@ public final class NipVerifierOptions {
     private final String                   ocspUrl;
     private final boolean                  ocspFailOpen;
     private final HttpClient               httpClient;
+    private final NipRevocationPolicy.Mode revocationMode;
+    private final boolean                  phase3Enforcement;
 
     private NipVerifierOptions(Builder b) {
         this.trustedCaPublicKeys = b.trustedCaPublicKeys;
@@ -51,6 +53,8 @@ public final class NipVerifierOptions {
         this.ocspUrl             = b.ocspUrl;
         this.ocspFailOpen        = b.ocspFailOpen;
         this.httpClient          = b.httpClient;
+        this.revocationMode      = b.revocationMode;
+        this.phase3Enforcement   = b.phase3Enforcement;
     }
 
     public Map<String, PublicKey>  trustedCaPublicKeys() { return trustedCaPublicKeys; }
@@ -74,6 +78,8 @@ public final class NipVerifierOptions {
 
     /** HttpClient used for OCSP; falls back to {@link HttpClient#newHttpClient()} when null. */
     public HttpClient              httpClient()          { return httpClient; }
+    public NipRevocationPolicy.Mode revocationMode()     { return revocationMode; }
+    public boolean                 phase3Enforcement()   { return phase3Enforcement; }
 
     public static Builder builder() { return new Builder(); }
 
@@ -87,6 +93,9 @@ public final class NipVerifierOptions {
         private String                   ocspUrl;
         private boolean                  ocspFailOpen;
         private HttpClient               httpClient;
+        private NipRevocationPolicy.Mode revocationMode =
+            NipRevocationPolicy.Mode.IF_CONFIGURED;
+        private boolean                  phase3Enforcement = false;
 
         public Builder trustedCaPublicKeys(Map<String, PublicKey> v) {
             this.trustedCaPublicKeys = v == null ? Map.of() : v;
@@ -122,6 +131,15 @@ public final class NipVerifierOptions {
         }
         public Builder httpClient(HttpClient v) {
             this.httpClient = v;
+            return this;
+        }
+        public Builder revocationMode(NipRevocationPolicy.Mode v) {
+            this.revocationMode = v == null
+                ? NipRevocationPolicy.Mode.IF_CONFIGURED : v;
+            return this;
+        }
+        public Builder phase3Enforcement(boolean v) {
+            this.phase3Enforcement = v;
             return this;
         }
         public NipVerifierOptions build() {

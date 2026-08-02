@@ -45,6 +45,17 @@ public interface NcpErrorCodes {
     String NCP_KEEPALIVE_TIMEOUT    = "NCP-KEEPALIVE-TIMEOUT";
     String NCP_REKEY_REQUIRED       = "NCP-REKEY-REQUIRED";
 
+    // ── Native-mode TLS session-NID binding (NPS-RFC-0006 §6.3–§6.4) ─────────
+    /**
+     * The mTLS client-certificate NID does not match the session IdentFrame NID, or a
+     * resumed TLS session's certificate NID differs from the ticket-bound NID.
+     *
+     * <p>NPS-CR-0009 reuses this as the native-path failover trigger: a session that
+     * lands on the wrong Anchor after an ownership transfer fails this way, which is
+     * one of the shapes {@link NcpFailoverConnector} retries on.</p>
+     */
+    String NCP_NID_MISMATCH         = "NCP-NID-MISMATCH";
+
     // ── NCP error → NPS status mapping ───────────────────────────────────────
 
     /**
@@ -69,6 +80,7 @@ public interface NcpErrorCodes {
         Map.entry(NCP_VERSION_INCOMPATIBLE,      NpsStatusCodes.NPS_PROTO_VERSION_INCOMPATIBLE),
         Map.entry(NCP_PREAMBLE_INVALID,          NpsStatusCodes.NPS_PROTO_PREAMBLE_INVALID),
         Map.entry(NCP_KEEPALIVE_TIMEOUT,         NpsStatusCodes.NPS_SERVER_TIMEOUT),
-        Map.entry(NCP_REKEY_REQUIRED,            NpsStatusCodes.NPS_CLIENT_BAD_FRAME)
+        Map.entry(NCP_REKEY_REQUIRED,            NpsStatusCodes.NPS_CLIENT_BAD_FRAME),
+        Map.entry(NCP_NID_MISMATCH,              NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED)
     );
 }

@@ -151,6 +151,7 @@ class NpsStatusCodesTest {
     // ── NWP error codes ───────────────────────────────────────────────────────
 
     @Test
+    @SuppressWarnings("deprecation")
     void nwpErrorCodesMapCoversAll47Codes() {
         Set<String> expected = Set.of(
             NwpErrorCodes.NWP_AUTH_NID_SCOPE_VIOLATION,
@@ -340,8 +341,17 @@ class NpsStatusCodesTest {
             NopErrorCodes.NOP_CONDITION_EVAL_ERROR,
             NopErrorCodes.NOP_INPUT_MAPPING_ERROR,
             NopErrorCodes.NOP_COMPENSATION_FAILED,
+            NopErrorCodes.NOP_COMPENSATION_PARTIAL_FAILED,
             NopErrorCodes.NOP_COMPENSATION_NOT_SUPPORTED,
-            NopErrorCodes.NOP_CALLBACK_HMAC_MISSING
+            NopErrorCodes.NOP_CALLBACK_HMAC_MISSING,
+            NopErrorCodes.NOP_CALLBACK_INVALID,
+            NopErrorCodes.NOP_CALLBACK_HMAC_INVALID,
+            NopErrorCodes.NOP_CLAIM_CONFLICT,
+            NopErrorCodes.NOP_SPAWN_SPEC_INVALID,
+            NopErrorCodes.NOP_RUNTIME_IDLE_TIMEOUT,
+            NopErrorCodes.NOP_RUNTIME_MAX_RUNTIME,
+            NopErrorCodes.NOP_TASK_RESULT_EXPIRED,
+            NopErrorCodes.NOP_STREAM_NAK_UNRESOLVABLE
         );
         for (String code : expected) {
             assertTrue(NopErrorCodes.NOP_TO_NPS_STATUS.containsKey(code),

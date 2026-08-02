@@ -90,20 +90,20 @@ public final class NcpServer implements Closeable {
             in.readFully(preambleBuf);
             NcpPreamble.validate(preambleBuf); // throws on mismatch
 
+            if (options.helloReadTimeoutMs() > 0) {
+                socket.setSoTimeout((int) Math.min(
+                    options.helloReadTimeoutMs(), Integer.MAX_VALUE));
+            } else {
+                socket.setSoTimeout(0);
+            }
+
             // 2 — read frame header
             FrameHeader header = NcpNativeClient.readFrameHeader(in);
 
-            if (header.frameType != FrameType.HELLO) {
-                throw new NpsFrameError(
-                    "Expected HelloFrame (0x" + Integer.toHexString(FrameType.HELLO.code)
-                        + ") as first frame after preamble, got 0x"
-                        + Integer.toHexString(header.frameType.code) + ".");
-            }
-
-            if (header.payloadLength > options.maxHelloPayload()) {
-                throw new NpsFrameError(
-                    "HelloFrame payload length " + header.payloadLength
-                        + " exceeds configured maximum " + options.maxHelloPayload() + " bytes.");
+            var headerDecision = NcpHandshakePolicy.evaluateHelloHeader(
+                header, 0, 0, options.maxHelloPayload());
+            if (headerDecision.action() != NcpHandshakePolicy.Action.CONTINUE) {
+                throw new NpsFrameError("Invalid native NCP Hello header.");
             }
 
             // 3 — read payload and decode HelloFrame
@@ -121,7 +121,8 @@ public final class NcpServer implements Closeable {
             // clear the handshake read timeout for the live session
             socket.setSoTimeout(0);
 
-            return new NcpServerConnection(socket, codec, hello);
+            return new NcpServerConnection(
+                socket, codec, hello, options.handshakeProfile());
         } catch (IOException | RuntimeException e) {
             closeQuietly(socket);
             throw e;

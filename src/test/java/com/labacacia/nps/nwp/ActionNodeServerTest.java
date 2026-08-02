@@ -104,6 +104,7 @@ class ActionNodeServerTest {
     // ── async + reserved actions ────────────────────────────────────────────────
 
     @Test
+    @SuppressWarnings("unchecked")
     void asyncInvokeThenTaskStatus() throws Exception {
         start(new ActionNodeServer(baseOpts(), (frame, ctx) -> {
             return new ActionNodeServer.ActionExecutionResult(Map.of("done", true));

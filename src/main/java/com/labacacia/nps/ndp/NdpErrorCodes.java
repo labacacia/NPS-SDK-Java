@@ -49,6 +49,13 @@ public interface NdpErrorCodes {
     /** Announce not received within heartbeat_interval_ms × 3 dead-peer threshold (NDP v0.9). */
     String NDP_ANNOUNCE_STALE       = "NDP-ANNOUNCE-STALE";
 
+    // ── Cluster / multi-Anchor HA (NPS-CR-0009, NDP v0.10 §9) ────────────────
+    /**
+     * Resolving a {@code cluster_anchor} found more than one live member at the top
+     * {@code cluster_epoch}. The registry MUST NOT resolve arbitrarily.
+     */
+    String NDP_CLUSTER_SPLIT        = "NDP-CLUSTER-SPLIT";
+
     // ── NDP error → NPS status mapping ───────────────────────────────────────
 
     /**
@@ -73,6 +80,7 @@ public interface NdpErrorCodes {
         Map.entry(NDP_ISSUER_NOT_ALLOWED,         NpsStatusCodes.NPS_AUTH_FORBIDDEN),
         Map.entry(NDP_CA_ATTEST_REQUIRED,         NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
         Map.entry(NDP_REGISTRY_UNAVAILABLE,       NpsStatusCodes.NPS_SERVER_UNAVAILABLE),
-        Map.entry(NDP_ANNOUNCE_STALE,             NpsStatusCodes.NPS_CLIENT_NOT_FOUND)
+        Map.entry(NDP_ANNOUNCE_STALE,             NpsStatusCodes.NPS_CLIENT_NOT_FOUND),
+        Map.entry(NDP_CLUSTER_SPLIT,              NpsStatusCodes.NPS_CLIENT_CONFLICT)
     );
 }

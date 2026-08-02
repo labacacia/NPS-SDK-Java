@@ -33,6 +33,11 @@ public final class NcpHandshakeCapsFrame implements NpsFrame {
     private final List<String> enabledEncodings;   // nullable
     private final String       anchorRef;          // nullable
     private final Object       payload;            // nullable
+    private final String       sessionVersion;
+    private final List<String> supportedProtocols;
+    private final Integer      maxFramePayload;
+    private final Boolean      extSupport;
+    private final Integer      maxConcurrentStreams;
 
     public NcpHandshakeCapsFrame(String nodeId,
                                  List<String> caps,
@@ -40,12 +45,32 @@ public final class NcpHandshakeCapsFrame implements NpsFrame {
                                  List<String> enabledEncodings,
                                  String anchorRef,
                                  Object payload) {
+        this(nodeId, caps, negotiatedEncoding, enabledEncodings, anchorRef, payload,
+            null, null, null, null, null);
+    }
+
+    public NcpHandshakeCapsFrame(String nodeId,
+                                 List<String> caps,
+                                 String negotiatedEncoding,
+                                 List<String> enabledEncodings,
+                                 String anchorRef,
+                                 Object payload,
+                                 String sessionVersion,
+                                 List<String> supportedProtocols,
+                                 Integer maxFramePayload,
+                                 Boolean extSupport,
+                                 Integer maxConcurrentStreams) {
         this.nodeId             = nodeId;
         this.caps               = caps;
         this.negotiatedEncoding = negotiatedEncoding;
         this.enabledEncodings   = enabledEncodings;
         this.anchorRef          = anchorRef;
         this.payload            = payload;
+        this.sessionVersion     = sessionVersion;
+        this.supportedProtocols = supportedProtocols;
+        this.maxFramePayload    = maxFramePayload;
+        this.extSupport         = extSupport;
+        this.maxConcurrentStreams = maxConcurrentStreams;
     }
 
     public NcpHandshakeCapsFrame(String nodeId, List<String> caps) {
@@ -61,6 +86,11 @@ public final class NcpHandshakeCapsFrame implements NpsFrame {
     public List<String> enabledEncodings()   { return enabledEncodings; }
     public String       anchorRef()          { return anchorRef; }
     public Object       payload()            { return payload; }
+    public String       sessionVersion()     { return sessionVersion; }
+    public List<String> supportedProtocols() { return supportedProtocols; }
+    public Integer      maxFramePayload()    { return maxFramePayload; }
+    public Boolean      extSupport()         { return extSupport; }
+    public Integer      maxConcurrentStreams() { return maxConcurrentStreams; }
 
     /**
      * Returns a copy of this frame with {@code negotiatedEncoding} and
@@ -73,6 +103,20 @@ public final class NcpHandshakeCapsFrame implements NpsFrame {
             nodeId, caps, negotiatedEncoding, enabledEncodings, anchorRef, payload);
     }
 
+    public NcpHandshakeCapsFrame withNegotiation(
+            NcpHandshakePolicy.Decision decision) {
+        return new NcpHandshakeCapsFrame(
+            nodeId, caps,
+            decision.negotiatedEncoding(),
+            decision.enabledEncodings(),
+            anchorRef, payload,
+            decision.sessionVersion(),
+            decision.supportedProtocols(),
+            decision.maxFramePayload(),
+            decision.extSupport(),
+            decision.maxConcurrentStreams());
+    }
+
     @Override
     public Map<String, Object> toDict() {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -80,6 +124,13 @@ public final class NcpHandshakeCapsFrame implements NpsFrame {
         m.put("caps",    caps);
         if (negotiatedEncoding != null) m.put("negotiated_encoding", negotiatedEncoding);
         if (enabledEncodings   != null) m.put("enabled_encodings",   enabledEncodings);
+        if (sessionVersion     != null) m.put("session_version",     sessionVersion);
+        if (supportedProtocols != null) m.put("supported_protocols", supportedProtocols);
+        if (maxFramePayload    != null) m.put("max_frame_payload",   maxFramePayload);
+        if (extSupport         != null) m.put("ext_support",         extSupport);
+        if (maxConcurrentStreams != null) {
+            m.put("max_concurrent_streams", maxConcurrentStreams);
+        }
         if (anchorRef          != null) m.put("anchor_ref",          anchorRef);
         if (payload            != null) m.put("payload",             payload);
         return m;
@@ -93,7 +144,12 @@ public final class NcpHandshakeCapsFrame implements NpsFrame {
             (String)       d.get("negotiated_encoding"),
             (List<String>) d.get("enabled_encodings"),
             (String)       d.get("anchor_ref"),
-            d.get("payload")
+            d.get("payload"),
+            (String)       d.get("session_version"),
+            (List<String>) d.get("supported_protocols"),
+            d.get("max_frame_payload") instanceof Number n ? n.intValue() : null,
+            (Boolean)      d.get("ext_support"),
+            d.get("max_concurrent_streams") instanceof Number n ? n.intValue() : null
         );
     }
 }

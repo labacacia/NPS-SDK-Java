@@ -46,6 +46,10 @@ public final class NdpAnnounceValidator {
             return NdpAnnounceResult.fail(NdpErrorCodes.NDP_ANNOUNCE_SIGNATURE_INVALID,
                 "Signature must start with 'ed25519:'");
         }
+        if (NdpRegistryProfile.verifyAnnounceSignature(
+                frame.toDict(), encoded, sig)) {
+            return NdpAnnounceResult.ok();
+        }
 
         try {
             String hexKey    = encoded.startsWith(PREFIX) ? encoded.substring(PREFIX.length()) : encoded;

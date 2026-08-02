@@ -26,42 +26,65 @@ public final class NcpServerOptions {
     private final boolean             requireAuthenticated;
     private final long                maxHelloPayload;
     private final long                handshakeReadTimeoutMs;
+    private final long                helloReadTimeoutMs;
+    private final NcpHandshakeProfile handshakeProfile;
 
     /** Default maximum HelloFrame payload: the non-extended frame ceiling (65 535 bytes). */
     public static final long DEFAULT_MAX_HELLO_PAYLOAD = 0xFFFFL;
 
     public NcpServerOptions() {
-        this(null, false, DEFAULT_MAX_HELLO_PAYLOAD, NcpPreamble.READ_TIMEOUT_MS);
+        this(null, false, DEFAULT_MAX_HELLO_PAYLOAD,
+            NcpPreamble.READ_TIMEOUT_MS, 5_000, NcpHandshakeProfile.defaults());
     }
 
     private NcpServerOptions(StreamAuthenticator authenticator,
                              boolean requireAuthenticated,
                              long maxHelloPayload,
-                             long handshakeReadTimeoutMs) {
+                             long handshakeReadTimeoutMs,
+                             long helloReadTimeoutMs,
+                             NcpHandshakeProfile handshakeProfile) {
         this.authenticator          = authenticator;
         this.requireAuthenticated   = requireAuthenticated;
         this.maxHelloPayload        = maxHelloPayload;
         this.handshakeReadTimeoutMs = handshakeReadTimeoutMs;
+        this.helloReadTimeoutMs     = helloReadTimeoutMs;
+        this.handshakeProfile       = handshakeProfile;
     }
 
     public StreamAuthenticator authenticator()      { return authenticator; }
     public boolean requireAuthenticatedStream()     { return requireAuthenticated; }
     public long    maxHelloPayload()                { return maxHelloPayload; }
     public long    handshakeReadTimeoutMs()         { return handshakeReadTimeoutMs; }
+    public long    helloReadTimeoutMs()             { return helloReadTimeoutMs; }
+    public NcpHandshakeProfile handshakeProfile()   { return handshakeProfile; }
 
     public NcpServerOptions withAuthenticator(StreamAuthenticator authenticator) {
-        return new NcpServerOptions(authenticator, requireAuthenticated, maxHelloPayload, handshakeReadTimeoutMs);
+        return new NcpServerOptions(authenticator, requireAuthenticated, maxHelloPayload,
+            handshakeReadTimeoutMs, helloReadTimeoutMs, handshakeProfile);
     }
 
     public NcpServerOptions withRequireAuthenticatedStream(boolean require) {
-        return new NcpServerOptions(authenticator, require, maxHelloPayload, handshakeReadTimeoutMs);
+        return new NcpServerOptions(authenticator, require, maxHelloPayload,
+            handshakeReadTimeoutMs, helloReadTimeoutMs, handshakeProfile);
     }
 
     public NcpServerOptions withMaxHelloPayload(long maxHelloPayload) {
-        return new NcpServerOptions(authenticator, requireAuthenticated, maxHelloPayload, handshakeReadTimeoutMs);
+        return new NcpServerOptions(authenticator, requireAuthenticated, maxHelloPayload,
+            handshakeReadTimeoutMs, helloReadTimeoutMs, handshakeProfile);
     }
 
     public NcpServerOptions withHandshakeReadTimeoutMs(long handshakeReadTimeoutMs) {
-        return new NcpServerOptions(authenticator, requireAuthenticated, maxHelloPayload, handshakeReadTimeoutMs);
+        return new NcpServerOptions(authenticator, requireAuthenticated, maxHelloPayload,
+            handshakeReadTimeoutMs, helloReadTimeoutMs, handshakeProfile);
+    }
+
+    public NcpServerOptions withHelloReadTimeoutMs(long value) {
+        return new NcpServerOptions(authenticator, requireAuthenticated, maxHelloPayload,
+            handshakeReadTimeoutMs, value, handshakeProfile);
+    }
+
+    public NcpServerOptions withHandshakeProfile(NcpHandshakeProfile value) {
+        return new NcpServerOptions(authenticator, requireAuthenticated, maxHelloPayload,
+            handshakeReadTimeoutMs, helloReadTimeoutMs, value);
     }
 }

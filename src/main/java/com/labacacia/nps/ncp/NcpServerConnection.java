@@ -22,11 +22,14 @@ public final class NcpServerConnection implements Closeable {
     private final Socket        socket;
     private final NpsFrameCodec codec;
     private final HelloFrame    clientHello;
+    private final NcpHandshakeProfile profile;
 
-    NcpServerConnection(Socket socket, NpsFrameCodec codec, HelloFrame clientHello) {
+    NcpServerConnection(Socket socket, NpsFrameCodec codec, HelloFrame clientHello,
+                        NcpHandshakeProfile profile) {
         this.socket      = socket;
         this.codec       = codec;
         this.clientHello = clientHello;
+        this.profile     = profile;
     }
 
     /** The {@link HelloFrame} sent by the connecting client. */
@@ -42,11 +45,26 @@ public final class NcpServerConnection implements Closeable {
      * {@code negotiated_encoding}/{@code enabled_encodings} fields are filled in.
      */
     public NcpSession accept(NcpHandshakeCapsFrame serverCaps) throws IOException {
-        NcpEncodingPolicy policy = negotiateEncodingPolicy(clientHello);
+        var negotiation = NcpHandshakePolicy.negotiate(profile, clientHello);
+        if (negotiation.action() != NcpHandshakePolicy.Action.ACCEPT) {
+            String error = negotiation.error() != null
+                ? negotiation.error() : NcpErrorCodes.NCP_VERSION_INCOMPATIBLE;
+            reject(new ErrorFrame(
+                negotiation.status() != null
+                    ? negotiation.status() : "NPS-PROTO-VERSION-INCOMPATIBLE",
+                error,
+                "Native NCP handshake negotiation failed.",
+                null));
+            throw new NpsError(
+                "Native NCP handshake negotiation failed: " + error);
+        }
+        EncodingTier defaultTier = "msgpack".equals(negotiation.negotiatedEncoding())
+            ? EncodingTier.MSGPACK : EncodingTier.JSON;
+        NcpEncodingPolicy policy = new NcpEncodingPolicy(
+            defaultTier,
+            negotiation.enabledEncodings().contains("binary_vector.v1"));
 
-        NcpHandshakeCapsFrame caps = serverCaps.withNegotiation(
-            NcpEncodingPolicy.encodingToken(policy.defaultTier()),
-            policy.enabledEncodings());
+        NcpHandshakeCapsFrame caps = serverCaps.withNegotiation(negotiation);
 
         byte[] wire = codec.encode(caps, policy.defaultTier());
         OutputStream out = socket.getOutputStream();
@@ -69,30 +87,6 @@ public final class NcpServerConnection implements Closeable {
         } finally {
             close();
         }
-    }
-
-    /**
-     * Selects a stable default encoding from the client's supported-encodings list.
-     * Optional encodings such as BinaryVector are recorded as extensions, not defaults.
-     */
-    private static NcpEncodingPolicy negotiateEncodingPolicy(HelloFrame hello) {
-        java.util.List<String> supported = hello.supportedEncodings() == null
-            ? java.util.List.of()
-            : hello.supportedEncodings();
-
-        boolean binaryVectorEnabled = supported.contains("binary_vector.v1");
-
-        for (String enc : supported) {
-            if ("msgpack".equals(enc)) {
-                return new NcpEncodingPolicy(EncodingTier.MSGPACK, binaryVectorEnabled);
-            }
-            if ("json".equals(enc)) {
-                return new NcpEncodingPolicy(EncodingTier.JSON, binaryVectorEnabled);
-            }
-        }
-
-        throw new NpsEncodingUnsupportedException(
-            "Client did not offer a supported stable default encoding (expected msgpack or json).");
     }
 
     @Override

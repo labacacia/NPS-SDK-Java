@@ -94,6 +94,9 @@ public final class NipCaRouter implements HttpHandler {
             if (path.equals("/.well-known/nps-ca") && method.equals("GET")) { wellKnown(ex); return; }
             if (path.equals("/v1/ca/cert") && method.equals("GET")) { caCert(ex); return; }
             if (path.equals("/v1/crl") && method.equals("GET")) { crl(ex); return; }
+            if (path.equals("/v1/certificates") && method.equals("GET")) {
+                certificates(ex); return;
+            }
 
             // /v1/{agents|nodes}/register
             if ((path.equals("/v1/agents/register") || path.equals("/v1/nodes/register")) && method.equals("POST")) {
@@ -194,7 +197,13 @@ public final class NipCaRouter implements HttpHandler {
 
     private void crl(HttpExchange ex) throws IOException {
         List<Map<String, Object>> entries = new ArrayList<>();
-        for (NipCertRecord r : ca.getCrl()) {
+        List<NipCertRecord> revoked = new ArrayList<>(ca.getCrl());
+        revoked.sort(java.util.Comparator
+            .comparing(NipCertRecord::revokedAt,
+                java.util.Comparator.nullsFirst(java.util.Comparator.naturalOrder()))
+            .thenComparing(NipCertRecord::serial)
+            .thenComparing(NipCertRecord::nid));
+        for (NipCertRecord r : revoked) {
             Map<String, Object> e = new LinkedHashMap<>();
             e.put("nid", r.nid());
             e.put("serial", r.serial());
@@ -208,6 +217,34 @@ public final class NipCaRouter implements HttpHandler {
         body.put("entries", entries);
         body.put("signature", ca.signArtifact(body));
         writeJson(ex, 200, body);
+    }
+
+    private void certificates(HttpExchange ex) throws IOException {
+        if (!authorized(ex)) { unauthorized(ex); return; }
+        List<NipCertRecord> records = new ArrayList<>(ca.listCertificates());
+        records.sort(java.util.Comparator
+            .comparing(NipCertRecord::issuedAt)
+            .thenComparing(NipCertRecord::serial));
+        List<Map<String, Object>> entries = new ArrayList<>();
+        for (NipCertRecord r : records) {
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("nid", r.nid());
+            entry.put("entity_type", r.entityType());
+            entry.put("serial", r.serial());
+            entry.put("pub_key", r.pubKey());
+            entry.put("capabilities", r.capabilities());
+            entry.put("scope", MAPPER.readValue(r.scopeJson(), Object.class));
+            entry.put("issued_by", r.issuedBy());
+            entry.put("issued_at", ISO.format(r.issuedAt()));
+            entry.put("expires_at", ISO.format(r.expiresAt()));
+            entry.put("revoked_at",
+                r.revokedAt() != null ? ISO.format(r.revokedAt()) : null);
+            entry.put("revoke_reason", r.revokeReason());
+            entry.put("nid_role", r.nidRole());
+            entry.put("parent_nid", r.parentNid());
+            entries.add(entry);
+        }
+        writeJson(ex, 200, Map.of("entries", entries));
     }
 
     // ── Register agent / node ─────────────────────────────────────────────────

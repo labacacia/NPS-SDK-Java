@@ -2,131 +2,57 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.labacacia.nps.nwp;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.labacacia.nps.core.NpsFrame;
+import com.sun.net.httpserver.HttpExchange;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
-/** Options for inbound MCP/A2A Bridge server hosting. */
-public final class BridgeServerOptions {
+/**
+ * HTTP hosting configuration for {@link BridgeServerHandler} (NPS-CR-0010).
+ *
+ * <p>Extends the transport-independent {@link BridgeInboundOptions} with paths, the
+ * host-context-bound verifier, and limits. The protocol servers never see this type.</p>
+ */
+public final class BridgeServerOptions extends BridgeInboundOptions {
 
-    /** Dispatch delegate used by inbound Bridge server adapters. */
+    /** Verifies a caller NID against the live host context — e.g. a NIP client certificate. */
     @FunctionalInterface
-    public interface ActionDispatcher {
-        /** Invoke a local NPS action and return its frame response. */
-        NpsFrame dispatch(ActionFrame frame) throws Exception;
-    }
+    public interface AgentVerifier { boolean verify(String agentNid, HttpExchange exchange); }
 
-    /** Action exposed by inbound MCP/A2A Bridge server adapters. */
-    public static final class Action {
-        /** NPS action identifier dispatched to the local node. */
-        public final String actionId;
-        /** Protocol-safe MCP tool name. Defaults to a sanitized {@link #actionId}. */
-        public final String toolName;
-        /** Human-readable display name for A2A AgentCard entries. */
-        public final String displayName;
-        /** Short action/tool description. */
-        public final String description;
-        /** JSON Schema describing input arguments. */
-        public final JsonNode inputSchema;
-        /** Whether generated {@link ActionFrame} values should request async execution. */
-        public final boolean async;
-        /** Optional A2A skill tags. */
-        public final List<String> tags;
-
-        public Action(String actionId, String toolName, String displayName, String description,
-                      JsonNode inputSchema, boolean async, List<String> tags) {
-            this.actionId = actionId;
-            this.toolName = toolName;
-            this.displayName = displayName;
-            this.description = description;
-            this.inputSchema = inputSchema;
-            this.async = async;
-            this.tags = tags;
-        }
-
-        /** Effective MCP tool name for this action. */
-        public String effectiveToolName() {
-            return (toolName == null || toolName.isBlank()) ? toToolName(actionId) : toolName;
-        }
-
-        /** Effective display name for A2A AgentCard skills. */
-        public String effectiveDisplayName() {
-            return (displayName == null || displayName.isBlank()) ? actionId : displayName;
-        }
-
-        /** Return a protocol-safe MCP tool name for an NPS action id. */
-        public static String toToolName(String actionId) {
-            if (actionId == null || actionId.isBlank()) {
-                return "action";
-            }
-            StringBuilder sb = new StringBuilder();
-            for (char ch : actionId.trim().toCharArray()) {
-                sb.append(Character.isLetterOrDigit(ch) || ch == '_' || ch == '-' ? ch : '_');
-            }
-            String name = trim(sb.toString(), '_');
-            return name.isBlank() ? "action" : name;
-        }
-
-        private static String trim(String s, char c) {
-            int start = 0;
-            int end = s.length();
-            while (start < end && s.charAt(start) == c) start++;
-            while (end > start && s.charAt(end - 1) == c) end--;
-            return s.substring(start, end);
-        }
-    }
-
-    /** Bridge server identifier surfaced in protocol metadata. */
-    public String nodeId = "nps-bridge-server";
-
-    /** Path prefix for inbound Bridge server endpoints. Empty string means root. */
-    public String pathPrefix = "";
-
-    /** MCP HTTP endpoint under {@link #pathPrefix}. */
-    public String mcpPath = "/mcp";
-
-    /** A2A JSON-RPC endpoint under {@link #pathPrefix}. */
-    public String a2aPath = "/a2a";
-
-    /** A2A AgentCard endpoint under {@link #pathPrefix}. */
+    // ── Paths ────────────────────────────────────────────────────────────────
+    public String pathPrefix       = "";
+    public String mcpPath          = "/mcp";
+    public String mcpSsePath       = "/mcp/sse";
+    public String a2aPath          = "/a2a";
     public String a2aAgentCardPath = "/.well-known/agent.json";
 
-    /** Require a valid {@code X-NWP-Agent} NID header before dispatching requests. */
-    public boolean requireAuth = true;
+    // ── Security ─────────────────────────────────────────────────────────────
+    /**
+     * If auth is required and no verifier is configured, every request is denied —
+     * fail-closed. The verifier takes the full host context on purpose so a deployment
+     * can bind the NID to a client certificate off the connection.
+     */
+    public AgentVerifier verifier;
 
-    /** Server name returned by MCP initialize and A2A AgentCard. */
-    public String serverName = "nps-bridge-server";
+    /** {@code 0} disables. Enforced twice: a Content-Length pre-check and a streaming cap. */
+    public long maxRequestBodyBytes = 1024L * 1024L;
 
-    /** Server version returned by MCP initialize and A2A AgentCard. */
-    public String serverVersion = "1.0.0-alpha.15";
+    /** {@code 0} disables. */
+    public int dispatchTimeoutMs = 30_000;
 
-    /** Server description returned by A2A AgentCard. */
-    public String description = "NPS Bridge server ingress.";
+    // ── In-process backend materialisation inputs ────────────────────────────
+    public NwpNodeRole nodeRole = NwpNodeRole.ACTION;
+    public Map<String, NwpActionDescriptor> actions = new LinkedHashMap<>();
+    public InProcessNwpBackend.ActionDispatcher dispatch;
+    public InProcessNwpBackend.QueryDispatcher  query;
 
-    /** Actions exposed as MCP tools and A2A skills. */
-    public final List<Action> actions = new ArrayList<>();
+    /** Remote nodes fronted over HTTP. */
+    public List<NwpUpstream> upstreams = new ArrayList<>();
 
-    /** Local NPS action dispatcher used by inbound Bridge server adapters. */
-    public ActionDispatcher dispatch;
-
-    /** Maximum inbound JSON-RPC request body size in bytes. Set to 0 to disable. */
-    public long maxRequestBodyBytes = 1L * 1024 * 1024;
-
-    /** Maximum time allowed for MCP/A2A dispatch in ms. Set to 0 to disable. */
-    public long dispatchTimeoutMs = 30_000;
-
-    /** Add an exposed local action and return these options for chaining. */
-    public BridgeServerOptions addAction(String actionId, String description, JsonNode inputSchema,
-                                         String toolName, boolean async, String displayName,
-                                         List<String> tags) {
-        actions.add(new Action(actionId, toolName, displayName, description, inputSchema, async, tags));
-        return this;
-    }
-
-    /** Add an exposed local action with only an id and description. */
-    public BridgeServerOptions addAction(String actionId, String description) {
-        return addAction(actionId, description, null, null, false, null, null);
+    /** {@link #pathPrefix} with trailing slashes removed. */
+    public String normalisedPrefix() {
+        return pathPrefix == null ? "" : pathPrefix.replaceAll("/+$", "");
     }
 }
