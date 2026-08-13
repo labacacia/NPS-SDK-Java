@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import com.labacacia.nps.core.NpsStatusCodes;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -24,8 +25,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Action Node server using the JDK built-in {@link HttpHandler}
@@ -81,6 +86,8 @@ public final class ActionNodeServer implements HttpHandler {
         public Duration taskRetention = Duration.ofHours(1);
         public boolean rejectPrivateCallbackUrls = true;
         public int defaultTokenBudget = 0;
+        /** Optional protocol-specific profiles advertised in the NWM manifest. */
+        public Map<String, Object> profiles = new LinkedHashMap<>();
     }
 
     /** Result of a single action execution. */
@@ -98,12 +105,63 @@ public final class ActionNodeServer implements HttpHandler {
 
     /** Execution context passed to the provider. */
     public record ActionContext(String agentNid, String requestId, String taskId,
-                                ActionSpec spec, int timeoutMs, String priority) {}
+                                ActionSpec spec, int timeoutMs, String priority,
+                                CancellationSignal cancellation) {
+        /** Backward-compatible constructor for providers that do not inspect cancellation. */
+        public ActionContext(String agentNid, String requestId, String taskId,
+                             ActionSpec spec, int timeoutMs, String priority) {
+            this(agentNid, requestId, taskId, spec, timeoutMs, priority, new CancellationSignal());
+        }
+    }
+
+    /** Cooperative cancellation signal shared by the server and provider coordinator. */
+    public static final class CancellationSignal {
+        private final AtomicBoolean cancelled = new AtomicBoolean();
+        private final CopyOnWriteArrayList<Runnable> listeners = new CopyOnWriteArrayList<>();
+
+        public boolean isCancelled() { return cancelled.get(); }
+
+        public void onCancel(Runnable listener) {
+            if (cancelled.get()) { listener.run(); return; }
+            listeners.add(listener);
+            if (cancelled.get() && listeners.remove(listener)) listener.run();
+        }
+
+        public void cancel() {
+            if (!cancelled.compareAndSet(false, true)) return;
+            for (Runnable listener : listeners) {
+                try { listener.run(); }
+                catch (RuntimeException ignored) { /* cancellation must reach every listener */ }
+            }
+            listeners.clear();
+        }
+    }
 
     /** Provider seam — implement to expose the declared actions. */
     @FunctionalInterface
     public interface Provider {
         ActionExecutionResult execute(ActionFrame frame, ActionContext context) throws Exception;
+
+        /** Runs before idempotency lookup so cached replay cannot bypass authorization. */
+        default void authorize(ActionFrame frame, ActionContext context) throws Exception {}
+    }
+
+    /** Provider-controlled canonical NWP error envelope. */
+    public static final class ActionExecutionException extends Exception {
+        private final int httpStatus;
+        private final String npsStatus;
+        private final String errorCode;
+
+        public ActionExecutionException(int httpStatus, String npsStatus, String errorCode, String message) {
+            super(message);
+            this.httpStatus = httpStatus;
+            this.npsStatus = npsStatus;
+            this.errorCode = errorCode;
+        }
+
+        public int httpStatus() { return httpStatus; }
+        public String npsStatus() { return npsStatus; }
+        public String errorCode() { return errorCode; }
     }
 
     // ── Task store ───────────────────────────────────────────────────────────────
@@ -311,6 +369,9 @@ public final class ActionNodeServer implements HttpHandler {
     private final java.util.function.Supplier<Instant> clock;
     private final byte[] nwmJson;
     private final byte[] actionsJson;
+    private final ConcurrentHashMap<String, TaskExecution> taskExecutions = new ConcurrentHashMap<>();
+
+    private record TaskExecution(CancellationSignal cancellation, Future<?> future) {}
 
     public ActionNodeServer(Options opt, Provider provider) {
         this(opt, provider, new InMemoryTaskStore(), new InMemoryIdempotencyCache(),
@@ -395,8 +456,9 @@ public final class ActionNodeServer implements HttpHandler {
 
         String actionId = frame.actionId();
 
-        if (SYSTEM_TASK_STATUS.equals(actionId)) { handleSystemTaskStatus(ex, frame); return; }
-        if (SYSTEM_TASK_CANCEL.equals(actionId)) { handleSystemTaskCancel(ex, frame); return; }
+        String agentNid = ex.getRequestHeaders().getFirst(NwpHttpHeaders.AGENT);
+        if (SYSTEM_TASK_STATUS.equals(actionId)) { handleSystemTaskStatus(ex, frame, agentNid); return; }
+        if (SYSTEM_TASK_CANCEL.equals(actionId)) { handleSystemTaskCancel(ex, frame, agentNid); return; }
 
         ActionSpec spec = actionId == null ? null : opt.actions.get(actionId);
         if (spec == null) {
@@ -429,9 +491,20 @@ public final class ActionNodeServer implements HttpHandler {
             }
         }
 
+        String effPriority = priority != null ? priority : "normal";
+        ActionContext admissionCtx = new ActionContext(
+            agentNid, frame.requestId(), null, spec, effectiveTimeout, effPriority);
+        try {
+            provider.authorize(frame, admissionCtx);
+        } catch (Exception error) {
+            writeExecutionError(ex, error, "action authorization failed.");
+            return;
+        }
+
+        String cacheActionId = scopedCacheActionId(actionId, agentNid);
         String paramsHash = hashParams(frame.params());
         if (frame.idempotencyKey() != null) {
-            IdempotentEntry cached = idempotency.get(actionId, frame.idempotencyKey());
+            IdempotentEntry cached = idempotency.get(cacheActionId, frame.idempotencyKey());
             if (cached != null) {
                 if (!cached.paramsHash.equals(paramsHash)) {
                     writeError(ex, 409, "NPS-CLIENT-CONFLICT", NwpErrorCodes.NWP_ACTION_IDEMPOTENCY_CONFLICT,
@@ -449,9 +522,6 @@ public final class ActionNodeServer implements HttpHandler {
             }
         }
 
-        String agentNid = ex.getRequestHeaders().getFirst(NwpHttpHeaders.AGENT);
-        String effPriority = priority != null ? priority : "normal";
-
         if (async) {
             String taskId = randomHex(16);
             taskStore.create(taskId, actionId, frame.requestId(), agentNid);
@@ -462,18 +532,27 @@ public final class ActionNodeServer implements HttpHandler {
                 entry.paramsHash = paramsHash;
                 entry.taskId = taskId;
                 entry.expiresAt = clock.get().plus(opt.idempotencyTtl);
-                idempotency.tryStore(actionId, frame.idempotencyKey(), entry);
+                idempotency.tryStore(cacheActionId, frame.idempotencyKey(), entry);
             }
 
-            ActionContext runCtx = new ActionContext(agentNid, frame.requestId(), taskId, spec, effectiveTimeout, effPriority);
-            taskExecutor.submit(() -> runAsyncTask(frame, runCtx, effectiveTimeout));
+            CancellationSignal cancellation = new CancellationSignal();
+            ActionContext runCtx = new ActionContext(
+                agentNid, frame.requestId(), taskId, spec, effectiveTimeout, effPriority, cancellation);
+            FutureTask<Void> task = new FutureTask<>(() -> {
+                runAsyncTask(frame, runCtx, effectiveTimeout);
+                return null;
+            });
+            taskExecutions.put(taskId, new TaskExecution(cancellation, task));
+            taskExecutor.execute(task);
 
             writeAsyncResponse(ex, taskId, "pending", frame.requestId(), spec.timeoutMsDefault);
             return;
         }
 
         // Synchronous path — bound the wait by the effective timeout, 504 on overrun.
-        ActionContext syncCtx = new ActionContext(agentNid, frame.requestId(), null, spec, effectiveTimeout, effPriority);
+        CancellationSignal cancellation = new CancellationSignal();
+        ActionContext syncCtx = new ActionContext(
+            agentNid, frame.requestId(), null, spec, effectiveTimeout, effPriority, cancellation);
         CompletableFuture<ActionExecutionResult> future = CompletableFuture.supplyAsync(() -> {
             try {
                 return provider.execute(frame, syncCtx);
@@ -486,15 +565,17 @@ public final class ActionNodeServer implements HttpHandler {
         try {
             result = future.get(effectiveTimeout, TimeUnit.MILLISECONDS);
         } catch (TimeoutException te) {
+            cancellation.cancel();
             future.cancel(true);
             writeError(ex, 504, "NPS-SERVER-TIMEOUT", NwpErrorCodes.NWP_NODE_UNAVAILABLE, "action execution timed out.");
             return;
         } catch (InterruptedException ie) {
+            cancellation.cancel();
             Thread.currentThread().interrupt();
             writeError(ex, 500, "NPS-SERVER-INTERNAL", NwpErrorCodes.NWP_NODE_UNAVAILABLE, "action execution failed.");
             return;
         } catch (ExecutionException ee) {
-            writeError(ex, 500, "NPS-SERVER-INTERNAL", NwpErrorCodes.NWP_NODE_UNAVAILABLE, "action execution failed.");
+            writeExecutionError(ex, unwrap(ee), "action execution failed.");
             return;
         }
         if (result == null) result = new ActionExecutionResult();
@@ -507,14 +588,17 @@ public final class ActionNodeServer implements HttpHandler {
             entry.result = result.result;
             entry.anchorRef = anchorRef;
             entry.expiresAt = clock.get().plus(opt.idempotencyTtl);
-            idempotency.tryStore(actionId, frame.idempotencyKey(), entry);
+            idempotency.tryStore(cacheActionId, frame.idempotencyKey(), entry);
         }
 
         writeCaps(ex, result.result, anchorRef, frame.requestId(), result.tokenEst);
     }
 
     private void runAsyncTask(ActionFrame frame, ActionContext runCtx, int timeoutMs) {
-        taskStore.tryTransition(runCtx.taskId(), "pending", "running");
+        if (!taskStore.tryTransition(runCtx.taskId(), "pending", "running")) {
+            taskExecutions.remove(runCtx.taskId());
+            return;
+        }
         CompletableFuture<ActionExecutionResult> future = CompletableFuture.supplyAsync(() -> {
             try {
                 return provider.execute(frame, runCtx);
@@ -522,25 +606,39 @@ public final class ActionNodeServer implements HttpHandler {
                 throw new CompletionException(e);
             }
         }, taskExecutor);
+        runCtx.cancellation().onCancel(() -> future.cancel(true));
         try {
             ActionExecutionResult res = future.get(timeoutMs, TimeUnit.MILLISECONDS);
             taskStore.complete(runCtx.taskId(), res == null ? null : res.result);
         } catch (TimeoutException te) {
+            runCtx.cancellation().cancel();
             future.cancel(true);
             taskStore.fail(runCtx.taskId(), Map.of("code", "NWP-NODE-UNAVAILABLE", "message", "task timed out"));
         } catch (InterruptedException ie) {
+            runCtx.cancellation().cancel();
+            future.cancel(true);
             Thread.currentThread().interrupt();
-            taskStore.fail(runCtx.taskId(), Map.of("code", "NWP-NODE-UNAVAILABLE", "message", "task interrupted"));
+            ActionTaskRecord rec = taskStore.get(runCtx.taskId());
+            if (rec == null || !"cancelled".equals(rec.status)) {
+                taskStore.fail(runCtx.taskId(), Map.of("code", "NWP-NODE-UNAVAILABLE", "message", "task interrupted"));
+            }
         } catch (ExecutionException ee) {
-            Throwable cause = ee.getCause() instanceof CompletionException ce ? ce.getCause() : ee.getCause();
+            Throwable cause = unwrap(ee);
             String msg = cause != null && cause.getMessage() != null ? cause.getMessage() : "task failed";
-            taskStore.fail(runCtx.taskId(), Map.of("code", "NWP-NODE-UNAVAILABLE", "message", msg));
+            ActionTaskRecord rec = taskStore.get(runCtx.taskId());
+            if (rec == null || !"cancelled".equals(rec.status)) {
+                String code = cause instanceof ActionExecutionException actionError
+                    ? actionError.errorCode() : NwpErrorCodes.NWP_NODE_UNAVAILABLE;
+                taskStore.fail(runCtx.taskId(), Map.of("code", code, "message", msg));
+            }
+        } finally {
+            taskExecutions.remove(runCtx.taskId());
         }
     }
 
     // ── system.task.status / system.task.cancel ──────────────────────────────
 
-    private void handleSystemTaskStatus(HttpExchange ex, ActionFrame frame) throws IOException {
+    private void handleSystemTaskStatus(HttpExchange ex, ActionFrame frame, String agentNid) throws IOException {
         String taskId = readStringParam(frame.params(), "task_id");
         if (taskId == null || taskId.isEmpty()) {
             writeError(ex, 400, "NPS-CLIENT-BAD-REQUEST", NwpErrorCodes.NWP_ACTION_PARAMS_INVALID, "params.task_id is required.");
@@ -549,6 +647,11 @@ public final class ActionNodeServer implements HttpHandler {
         ActionTaskRecord rec = taskStore.get(taskId);
         if (rec == null) {
             writeError(ex, 404, "NPS-CLIENT-NOT-FOUND", NwpErrorCodes.NWP_TASK_NOT_FOUND, "Unknown task_id '" + taskId + "'.");
+            return;
+        }
+        if (!java.util.Objects.equals(rec.agentNid, agentNid)) {
+            writeError(ex, 403, NpsStatusCodes.NPS_AUTH_FORBIDDEN,
+                NwpErrorCodes.NWP_AUTH_NID_SCOPE_VIOLATION, "The caller does not own this task.");
             return;
         }
         Map<String, Object> status = new LinkedHashMap<>();
@@ -563,7 +666,7 @@ public final class ActionNodeServer implements HttpHandler {
         writeCaps(ex, status, null, frame.requestId(), 0);
     }
 
-    private void handleSystemTaskCancel(HttpExchange ex, ActionFrame frame) throws IOException {
+    private void handleSystemTaskCancel(HttpExchange ex, ActionFrame frame, String agentNid) throws IOException {
         String taskId = readStringParam(frame.params(), "task_id");
         if (taskId == null || taskId.isEmpty()) {
             writeError(ex, 400, "NPS-CLIENT-BAD-REQUEST", NwpErrorCodes.NWP_ACTION_PARAMS_INVALID, "params.task_id is required.");
@@ -574,6 +677,11 @@ public final class ActionNodeServer implements HttpHandler {
             writeError(ex, 404, "NPS-CLIENT-NOT-FOUND", NwpErrorCodes.NWP_TASK_NOT_FOUND, "Unknown task_id '" + taskId + "'.");
             return;
         }
+        if (!java.util.Objects.equals(rec.agentNid, agentNid)) {
+            writeError(ex, 403, NpsStatusCodes.NPS_AUTH_FORBIDDEN,
+                NwpErrorCodes.NWP_AUTH_NID_SCOPE_VIOLATION, "The caller does not own this task.");
+            return;
+        }
         String s = rec.status;
         if ("completed".equals(s) || "failed".equals(s) || "cancelled".equals(s)) {
             writeError(ex, 409, "NPS-CLIENT-CONFLICT", NwpErrorCodes.NWP_TASK_ALREADY_CANCELLED,
@@ -581,6 +689,11 @@ public final class ActionNodeServer implements HttpHandler {
             return;
         }
         taskStore.cancel(taskId);
+        TaskExecution execution = taskExecutions.get(taskId);
+        if (execution != null) {
+            execution.cancellation().cancel();
+            execution.future().cancel(true);
+        }
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("task_id", taskId);
         payload.put("status", "cancelled");
@@ -596,6 +709,19 @@ public final class ActionNodeServer implements HttpHandler {
             return spec.timeoutMsDefault != null ? spec.timeoutMsDefault : opt.defaultTimeoutMs;
         }
         return Math.min(requested, hardMax);
+    }
+
+    private String scopedCacheActionId(String actionId, String agentNid) {
+        return opt.nodeId + '\u001f' + actionId + '\u001f' + (agentNid == null ? "" : agentNid);
+    }
+
+    private static Throwable unwrap(Throwable error) {
+        Throwable current = error;
+        while ((current instanceof ExecutionException || current instanceof CompletionException) &&
+               current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
     }
 
     private static String hashParams(Map<String, Object> params) {
@@ -657,6 +783,17 @@ public final class ActionNodeServer implements HttpHandler {
         writeRaw(ex, status, MAPPER.writeValueAsBytes(env));
     }
 
+    private void writeExecutionError(HttpExchange ex, Throwable error, String fallback) throws IOException {
+        Throwable cause = unwrap(error);
+        if (cause instanceof ActionExecutionException actionError) {
+            writeError(ex, actionError.httpStatus(), actionError.npsStatus(),
+                actionError.errorCode(), actionError.getMessage());
+            return;
+        }
+        writeError(ex, 500, NpsStatusCodes.NPS_SERVER_INTERNAL,
+            NwpErrorCodes.NWP_NODE_UNAVAILABLE, fallback);
+    }
+
     // ── Manifest ───────────────────────────────────────────────────────────────
 
     private Map<String, Object> actionsMap() {
@@ -696,6 +833,7 @@ public final class ActionNodeServer implements HttpHandler {
         auth.put("identity_type", opt.requireAuth ? "nip-cert" : "none");
         m.put("auth", auth);
         m.put("endpoints", Map.of("invoke", baseUrl + "/invoke", "schema", baseUrl + "/.schema"));
+        if (opt.profiles != null && !opt.profiles.isEmpty()) m.put("profiles", opt.profiles);
         return m;
     }
 

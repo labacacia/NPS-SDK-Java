@@ -88,13 +88,14 @@ public final class NwpNativeNodeServer {
         try {
             if (frame instanceof QueryFrame query) {
                 if (queryHandler == null) throw new IllegalStateException("No native NWP query handler configured.");
-                response = queryHandler.handle(query);
+                response = queryHandler.handle(query).withRequestId(query.requestId());
             } else if (frame instanceof ActionFrame action) {
                 if (actionHandler == null) throw new IllegalStateException("No native NWP action handler configured.");
                 Object result = actionHandler.handle(action);
-                if (result instanceof NpsFrame npsFrame) response = npsFrame;
-                else if (result == null) response = new CapsFrame(anchorRef, 0, List.of());
-                else response = new CapsFrame(anchorRef, 1, List.of(toRow(result)));
+                if (result instanceof CapsFrame caps) response = caps.withRequestId(action.requestId());
+                else if (result instanceof NpsFrame npsFrame) response = npsFrame;
+                else if (result == null) response = new CapsFrame(anchorRef, 0, List.of()).withRequestId(action.requestId());
+                else response = new CapsFrame(anchorRef, 1, List.of(toRow(result))).withRequestId(action.requestId());
             } else {
                 response = new ErrorFrame(
                     "NPS-CLIENT-BAD-FRAME",

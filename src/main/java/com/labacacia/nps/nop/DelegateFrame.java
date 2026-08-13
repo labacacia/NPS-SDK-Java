@@ -59,13 +59,19 @@ public final class DelegateFrame implements NpsFrame {
     public String idempotencyKey()       { return idempotencyKey; }
     public String targetClusterAnchor()  { return targetClusterAnchor; }
 
+    /** Alias for {@link #taskId()}, matching the {@code parent_task_id} wire field. */
+    public String parentTaskId()         { return taskId; }
+    /** Alias for {@link #agentNid()}, matching the {@code target_agent_nid} wire field. */
+    public String targetAgentNid()       { return agentNid; }
+
     @Override
     public Map<String, Object> toDict() {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("task_id",               taskId);
+        // NPS-5 §3.2 names these fields `parent_task_id` and `target_agent_nid`.
+        m.put("parent_task_id",        taskId);
         m.put("subtask_id",            subtaskId);
         m.put("action",                action);
-        m.put("agent_nid",             agentNid);
+        m.put("target_agent_nid",      agentNid);
         m.put("inputs",                inputs);
         m.put("params",                params);
         m.put("idempotency_key",       idempotencyKey);
@@ -77,11 +83,13 @@ public final class DelegateFrame implements NpsFrame {
 
     @SuppressWarnings("unchecked")
     public static DelegateFrame fromDict(Map<String, Object> d) {
+        // Read the spec keys, falling back to the pre-fix keys this SDK emitted
+        // through v1.0.0-alpha.17 so peers on the old wire format still decode.
         return new DelegateFrame(
-            (String) d.get("task_id"),
+            (String) d.getOrDefault("parent_task_id",   d.get("task_id")),
             (String) d.get("subtask_id"),
             (String) d.get("action"),
-            (String) d.get("agent_nid"),
+            (String) d.getOrDefault("target_agent_nid", d.get("agent_nid")),
             (Map<String,Object>) d.get("inputs"),
             (Map<String,Object>) d.get("params"),
             (String) d.get("idempotency_key"),

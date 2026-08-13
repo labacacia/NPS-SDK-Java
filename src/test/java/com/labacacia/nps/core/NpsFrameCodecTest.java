@@ -69,11 +69,12 @@ class NpsFrameCodecTest {
 
     @Test void encodesDecodesCapsFrame() {
         var frame = new CapsFrame(AID, 2, List.of(Map.of("id",1), Map.of("id",2)),
-            "cursor:X", 100, true, "cl100k");
+            "cursor:X", 100, true, "cl100k", "req-caps-1");
         var out = (CapsFrame) codec.decode(codec.encode(frame));
         assertEquals(2, out.count());
         assertEquals("cursor:X", out.nextCursor());
         assertEquals("cl100k",   out.tokenizerUsed());
+        assertEquals("req-caps-1", out.requestId());
     }
 
     @Test void encodesDecodesErrorFrame() {

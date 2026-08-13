@@ -42,7 +42,7 @@ class NpsStatusCodesTest {
     // ── HTTP_STATUS_MAP coverage ──────────────────────────────────────────────
 
     @Test
-    void httpStatusMapContainsAll25SpecCodes() {
+    void httpStatusMapContainsAll26SpecCodes() {
         Set<String> specCodes = Set.of(
             NpsStatusCodes.NPS_OK,
             NpsStatusCodes.NPS_OK_ACCEPTED,
@@ -58,6 +58,7 @@ class NpsStatusCodesTest {
             NpsStatusCodes.NPS_LIMIT_RATE,
             NpsStatusCodes.NPS_LIMIT_BUDGET,
             NpsStatusCodes.NPS_LIMIT_PAYLOAD,
+            NpsStatusCodes.NPS_LIMIT_RESOURCE,
             NpsStatusCodes.NPS_SERVER_INTERNAL,
             NpsStatusCodes.NPS_SERVER_UNSUPPORTED,
             NpsStatusCodes.NPS_SERVER_UNAVAILABLE,
@@ -94,6 +95,7 @@ class NpsStatusCodesTest {
         assertEquals(426, NpsStatusCodes.toHttpStatus(NpsStatusCodes.NPS_PROTO_VERSION_INCOMPATIBLE));
         assertEquals(429, NpsStatusCodes.toHttpStatus(NpsStatusCodes.NPS_LIMIT_RATE));
         assertEquals(429, NpsStatusCodes.toHttpStatus(NpsStatusCodes.NPS_LIMIT_BUDGET));
+        assertEquals(429, NpsStatusCodes.toHttpStatus(NpsStatusCodes.NPS_LIMIT_RESOURCE));
         assertEquals(429, NpsStatusCodes.toHttpStatus(NpsStatusCodes.NPS_STREAM_LIMIT));
         assertEquals(500, NpsStatusCodes.toHttpStatus(NpsStatusCodes.NPS_SERVER_INTERNAL));
         assertEquals(501, NpsStatusCodes.toHttpStatus(NpsStatusCodes.NPS_SERVER_UNSUPPORTED));

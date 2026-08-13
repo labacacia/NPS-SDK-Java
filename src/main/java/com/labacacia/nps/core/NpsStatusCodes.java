@@ -35,6 +35,7 @@ public interface NpsStatusCodes {
     String NPS_LIMIT_RATE    = "NPS-LIMIT-RATE";
     String NPS_LIMIT_BUDGET  = "NPS-LIMIT-BUDGET";
     String NPS_LIMIT_PAYLOAD = "NPS-LIMIT-PAYLOAD";
+    String NPS_LIMIT_RESOURCE = "NPS-LIMIT-RESOURCE";
 
     // ── Server Errors (SERVER) ───────────────────────────────────────────────
     String NPS_SERVER_INTERNAL              = "NPS-SERVER-INTERNAL";
@@ -90,6 +91,7 @@ public interface NpsStatusCodes {
         Map.entry(NPS_LIMIT_RATE,                  429),
         Map.entry(NPS_LIMIT_BUDGET,                429),
         Map.entry(NPS_LIMIT_PAYLOAD,               413),
+        Map.entry(NPS_LIMIT_RESOURCE,              429),
         // SERVER
         Map.entry(NPS_SERVER_INTERNAL,             500),
         Map.entry(NPS_SERVER_UNSUPPORTED,          501),

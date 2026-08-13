@@ -71,6 +71,27 @@ class NopTest {
         assertEquals("idem-x", out.idempotencyKey());
     }
 
+    @Test void delegateFrameEmitsSpecWireKeys() {
+        var frame = new DelegateFrame("t1","sub1","classify","urn:nps:node:a:1",null,null,null);
+        var d     = frame.toDict();
+        assertEquals("t1",                 d.get("parent_task_id"));
+        assertEquals("urn:nps:node:a:1",   d.get("target_agent_nid"));
+        assertFalse(d.containsKey("task_id"));
+        assertFalse(d.containsKey("agent_nid"));
+    }
+
+    @Test void delegateFrameDecodesLegacyWireKeys() {
+        // Peers running <= v1.0.0-alpha.17 of this SDK emit task_id / agent_nid.
+        var legacy = new java.util.LinkedHashMap<String,Object>();
+        legacy.put("task_id",    "t1");
+        legacy.put("subtask_id", "sub1");
+        legacy.put("action",     "classify");
+        legacy.put("agent_nid",  "urn:nps:node:a:1");
+        var out = DelegateFrame.fromDict(legacy);
+        assertEquals("t1",               out.parentTaskId());
+        assertEquals("urn:nps:node:a:1", out.targetAgentNid());
+    }
+
     @Test void delegateFrameOptionals() {
         var codec = new NpsFrameCodec(NpsRegistries.createFull());
         var frame = new DelegateFrame("t1","s1","act","urn:nps:node:a:1",null,null,null);

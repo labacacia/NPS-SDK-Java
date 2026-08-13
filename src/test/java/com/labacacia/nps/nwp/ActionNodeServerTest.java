@@ -14,8 +14,14 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.labacacia.nps.core.NpsStatusCodes;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -237,6 +243,77 @@ class ActionNodeServerTest {
         assertEquals(202, r1.statusCode());
         assertEquals(202, r2.statusCode());
         assertEquals(body(r1).get("task_id"), body(r2).get("task_id"));
+    }
+
+    @Test
+    void idempotencyIsCallerScopedAndReplayIsReauthorized() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        AtomicInteger admissions = new AtomicInteger();
+        class Provider implements ActionNodeServer.Provider {
+            volatile boolean revoke;
+
+            @Override public void authorize(ActionFrame frame, ActionNodeServer.ActionContext context)
+                throws ActionNodeServer.ActionExecutionException {
+                admissions.incrementAndGet();
+                if (revoke) throw new ActionNodeServer.ActionExecutionException(
+                    401, NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED,
+                    NwpErrorCodes.NWP_AUTH_NID_REVOKED, "revoked");
+            }
+
+            @Override public ActionNodeServer.ActionExecutionResult execute(
+                ActionFrame frame, ActionNodeServer.ActionContext context) {
+                return new ActionNodeServer.ActionExecutionResult(
+                    Map.of("call", calls.incrementAndGet(), "owner", context.agentNid()));
+            }
+        }
+        var provider = new Provider();
+        start(new ActionNodeServer(baseOpts(), provider));
+        var request = new LinkedHashMap<String, Object>();
+        request.put("action_id", "orders.create");
+        request.put("params", Map.of("x", 1));
+        request.put("idempotency_key", "shared");
+        assertEquals(200, post("/orders/invoke", request, AGENT, null).statusCode());
+        var bob = post("/orders/invoke", request, "urn:nps:agent:bob", null);
+        assertEquals(200, bob.statusCode());
+        var bobData = (Map<?, ?>) ((java.util.List<?>) body(bob).get("data")).get(0);
+        assertEquals("urn:nps:agent:bob", bobData.get("owner"));
+        assertEquals(2, calls.get());
+
+        provider.revoke = true;
+        var replay = post("/orders/invoke", request, AGENT, null);
+        assertEquals(401, replay.statusCode());
+        assertEquals(NwpErrorCodes.NWP_AUTH_NID_REVOKED, body(replay).get("error"));
+        assertEquals(3, admissions.get());
+    }
+
+    @Test
+    void taskAccessIsOwnerScopedAndCancelSignalsProvider() throws Exception {
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch cancelled = new CountDownLatch(1);
+        start(new ActionNodeServer(baseOpts(), (frame, context) -> {
+            started.countDown();
+            context.cancellation().onCancel(cancelled::countDown);
+            while (!context.cancellation().isCancelled()) Thread.sleep(10);
+            throw new InterruptedException("cancelled");
+        }));
+        var accepted = post("/orders/invoke",
+            Map.of("action_id", "orders.batch", "async", true), AGENT, null);
+        String taskId = (String) body(accepted).get("task_id");
+        assertTrue(started.await(1, TimeUnit.SECONDS));
+
+        for (String action : List.of(
+            ActionNodeServer.SYSTEM_TASK_STATUS, ActionNodeServer.SYSTEM_TASK_CANCEL)) {
+            var denied = post("/orders/invoke",
+                Map.of("action_id", action, "params", Map.of("task_id", taskId)),
+                "urn:nps:agent:bob", null);
+            assertEquals(403, denied.statusCode());
+            assertEquals(NwpErrorCodes.NWP_AUTH_NID_SCOPE_VIOLATION, body(denied).get("error"));
+        }
+        var cancel = post("/orders/invoke",
+            Map.of("action_id", ActionNodeServer.SYSTEM_TASK_CANCEL,
+                "params", Map.of("task_id", taskId)), AGENT, null);
+        assertEquals(200, cancel.statusCode());
+        assertTrue(cancelled.await(1, TimeUnit.SECONDS));
     }
 
     // ── timeout ──────────────────────────────────────────────────────────────────

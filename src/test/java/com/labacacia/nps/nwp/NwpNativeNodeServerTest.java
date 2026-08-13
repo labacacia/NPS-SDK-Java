@@ -27,11 +27,14 @@ final class NwpNativeNodeServerTest {
             query -> new CapsFrame("native:test", 1, List.of(Map.<String, Object>of("id", 42))),
             null);
 
-        byte[] out = server.dispatchWire(codec.encode(new QueryFrame("sha256:a", null, null, null, null, null, null, null)));
+        byte[] out = server.dispatchWire(codec.encode(new QueryFrame(
+            "sha256:a", null, null, null, null, null, null, null,
+            null, null, null, null, null, null, "req-query-1")));
         NpsFrame frame = codec.decode(out);
 
         assertInstanceOf(CapsFrame.class, frame);
         assertEquals(1, ((CapsFrame) frame).count());
+        assertEquals("req-query-1", ((CapsFrame) frame).requestId());
     }
 
     @Test
@@ -44,11 +47,12 @@ final class NwpNativeNodeServerTest {
             null,
             action -> Map.of("action", action.actionId()));
 
-        byte[] out = server.dispatchWire(codec.encode(new ActionFrame("ping")));
+        byte[] out = server.dispatchWire(codec.encode(new ActionFrame("ping", null, false, null, null, null, null, "req-action-1")));
         NpsFrame frame = codec.decode(out);
 
         assertInstanceOf(CapsFrame.class, frame);
         assertEquals("ping", ((CapsFrame) frame).data().getFirst().get("action"));
+        assertEquals("req-action-1", ((CapsFrame) frame).requestId());
     }
 
     @Test

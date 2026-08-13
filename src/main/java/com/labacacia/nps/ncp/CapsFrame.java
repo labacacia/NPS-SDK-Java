@@ -19,9 +19,16 @@ public final class CapsFrame implements NpsFrame {
     private final Integer                   tokenEst;      // nullable
     private final Boolean                   cached;        // nullable
     private final String                    tokenizerUsed; // nullable
+    private final String                    requestId;     // nullable
 
     public CapsFrame(String anchorRef, int count, List<Map<String, Object>> data,
                      String nextCursor, Integer tokenEst, Boolean cached, String tokenizerUsed) {
+        this(anchorRef, count, data, nextCursor, tokenEst, cached, tokenizerUsed, null);
+    }
+
+    public CapsFrame(String anchorRef, int count, List<Map<String, Object>> data,
+                     String nextCursor, Integer tokenEst, Boolean cached, String tokenizerUsed,
+                     String requestId) {
         this.anchorRef     = anchorRef;
         this.count         = count;
         this.data          = data;
@@ -29,6 +36,7 @@ public final class CapsFrame implements NpsFrame {
         this.tokenEst      = tokenEst;
         this.cached        = cached;
         this.tokenizerUsed = tokenizerUsed;
+        this.requestId     = requestId;
     }
 
     public CapsFrame(String anchorRef, int count, List<Map<String, Object>> data) {
@@ -45,6 +53,12 @@ public final class CapsFrame implements NpsFrame {
     public Integer tokenEst()     { return tokenEst; }
     public Boolean cached()       { return cached; }
     public String tokenizerUsed() { return tokenizerUsed; }
+    public String requestId()     { return requestId; }
+
+    public CapsFrame withRequestId(String value) {
+        if (value == null) return this;
+        return new CapsFrame(anchorRef, count, data, nextCursor, tokenEst, cached, tokenizerUsed, value);
+    }
 
     @Override
     public Map<String, Object> toDict() {
@@ -56,6 +70,7 @@ public final class CapsFrame implements NpsFrame {
         m.put("token_est",      tokenEst);
         m.put("cached",         cached);
         m.put("tokenizer_used", tokenizerUsed);
+        m.put("request_id",     requestId);
         return m;
     }
 
@@ -69,7 +84,8 @@ public final class CapsFrame implements NpsFrame {
             (String) d.get("next_cursor"),
             te instanceof Number n ? n.intValue() : null,
             (Boolean) d.get("cached"),
-            (String) d.get("tokenizer_used")
+            (String) d.get("tokenizer_used"),
+            (String) d.get("request_id")
         );
     }
 }
