@@ -321,21 +321,11 @@ var retrieved = cache.get("sha256:...");
 
 ## 测试
 
-5 个协议 + RFC-0002 共 98 个测试，运行：
+协议、服务端 profile 与共享一致性套件共 693 个测试，运行：
 
 ```bash
 ./gradlew test
 ```
-
-测试类：
-- `AnchorFrameCacheTest` — 12
-- `FrameHeaderTest` — 8
-- `NpsFrameCodecTest` — 15
-- `NdpTest` — 25（帧、注册表、校验器、匹配）
-- `NipIdentityTest` — 13（密钥生成、签名/验签、持久化、帧）
-- `NipX509Tests` — 5（RFC-0002：builder + verifier 正路径 + 4 反路径）
-- `AcmeAgent01Tests` — 2（RFC-0002：完整 ACME round-trip + 篡改签名）
-- `NopTest` — 18（退避、帧、任务状态）
 
 ## 许可证
 

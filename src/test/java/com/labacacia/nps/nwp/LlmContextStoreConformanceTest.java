@@ -30,7 +30,7 @@ final class LlmContextStoreConformanceTest {
         var tests = new ArrayList<DynamicTest>();
         for (var vector : root.path("vectors")) {
             String id = vector.path("id").asText();
-            tests.add(DynamicTest.dynamicTest(id, () -> execute(id)));
+            tests.add(DynamicTest.dynamicTest(id, () -> execute(vector)));
         }
         return tests.stream();
     }
@@ -49,7 +49,9 @@ final class LlmContextStoreConformanceTest {
             () -> snapshot.transcript().add(user("Mutation")));
     }
 
-    private static void execute(String id) {
+    private static void execute(com.fasterxml.jackson.databind.JsonNode vector) {
+        String id = vector.path("id").asText();
+        assertFixtureContract(vector);
         switch (id) {
             case "nwp.llm-context.001" -> stateless();
             case "nwp.llm-context.002" -> create();
@@ -72,6 +74,140 @@ final class LlmContextStoreConformanceTest {
             case "nwp.llm-context.019" -> missingKey();
             default -> fail("Unimplemented shared vector: " + id);
         }
+    }
+
+    private static void assertFixtureContract(com.fasterxml.jackson.databind.JsonNode vector) {
+        String id = vector.path("id").asText();
+        var input = vector.path("input");
+        var expected = vector.path("expected");
+        assertTrue(input.size() > 0, id + " input must not be empty");
+        assertTrue(expected.size() > 0, id + " expected must not be empty");
+        switch (id.substring(id.length() - 3)) {
+            case "001" -> {
+                assertTrue(input.path("params").path("context").isMissingNode());
+                assertEquals("stateless", text(expected, "mode"));
+                assertTrue(bool(expected, "dispatched"));
+                assertFalse(bool(expected, "context_mutated"));
+            }
+            case "002" -> {
+                assertEquals(text(input, "owner_nid"), text(expected, "owner_nid"));
+                assertEquals(1, number(expected, "version"));
+                assertTrue(bool(expected, "committed"));
+            }
+            case "003" -> {
+                var pre = input.path("pre_state");
+                var params = input.path("params");
+                assertEquals(number(pre, "version") + 1, number(expected, "version"));
+                assertEquals(params.path("messages").size(), number(expected, "accepted_delta_message_count"));
+                assertEquals(pre.path("messages").size() + params.path("messages").size() + 1,
+                    number(expected, "post_message_count"));
+            }
+            case "004" -> {
+                assertEquals(number(input.path("pre_state"), "version"), number(expected, "post_version"));
+                assertEquals(number(input.path("pre_state"), "version"), number(expected.path("hint"), "current_version"));
+                assertEquals(NwpErrorCodes.NWP_LLM_CONTEXT_VERSION_CONFLICT, text(expected, "error"));
+            }
+            case "005" -> {
+                assertEquals(number(input.path("request"), "base_version"), number(expected, "parent_version"));
+                assertEquals(number(input, "parent_version_at_child_commit"), number(expected, "post_parent_version"));
+                assertEquals(1, number(expected, "version"));
+            }
+            case "006" -> {
+                assertEquals(number(input.path("pre_state"), "version") + 1, number(expected, "version"));
+                assertEquals(text(input.path("request"), "model"), text(expected, "resolved_model"));
+            }
+            case "007" -> {
+                assertEquals(number(input.path("pre_state"), "version"), number(expected, "post_version"));
+                assertEquals(NwpErrorCodes.NWP_LLM_CONTEXT_BINDING_MISMATCH, text(expected, "error"));
+                assertFalse(bool(expected, "provider_dispatched") || bool(expected, "stateless_fallback"));
+            }
+            case "008" -> {
+                assertNotEquals(text(input, "owner_nid"), text(input, "caller_nid"));
+                assertFalse(arrayContains(input.path("caller_capabilities"), LlmActionCodec.CAPABILITY_LLM_CONTEXT));
+                assertEquals(NwpErrorCodes.NWP_LLM_CONTEXT_FORBIDDEN, text(expected, "error"));
+            }
+            case "009" -> {
+                assertEquals(number(input.path("pre_state"), "version"), number(expected, "post_version"));
+                assertFalse(bool(expected, "committed"));
+                assertTrue(bool(expected, "reservation_released"));
+            }
+            case "010" -> {
+                var sequence = input.path("status_sequence");
+                var terminal = sequence.path(sequence.size() - 1);
+                assertFalse(bool(expected.path("running_status"), "context_id_present"));
+                assertEquals(text(terminal, "context_id"), text(expected.path("completed_status"), "context_id"));
+                assertEquals(number(terminal, "version"), number(expected.path("completed_status"), "version"));
+            }
+            case "011" -> {
+                assertEquals(number(input.path("pre_state"), "version") + 1,
+                    number(expected.path("release_receipt"), "version"));
+                assertEquals(number(input.path("expiry_branch"), "active_version"),
+                    number(expected.path("expiry_tombstone"), "version"));
+            }
+            case "012" -> {
+                var usage = input.path("usage");
+                assertEquals(number(usage, "input_tokens"),
+                    number(usage, "reused_tokens") + number(usage, "evaluated_tokens"));
+                assertTrue(number(usage, "wire_input_bytes") < number(input, "stateless_wire_input_bytes"));
+                assertTrue(bool(expected, "usage_equation_valid") && bool(expected, "wire_input_smaller_than_stateless"));
+            }
+            case "013" -> {
+                var context = input.path("manifest").path("context");
+                assertEquals(input.path("implemented_operations"), context.path("operations"));
+                assertEquals(text(input, "implemented_persistence"), text(context, "persistence"));
+                assertTrue(bool(expected, "manifest_valid"));
+                assertEquals(LlmActionCodec.CAPABILITY_LLM_CONTEXT, text(expected, "requires_capability"));
+            }
+            case "014" -> {
+                assertEquals("process", text(input, "persistence"));
+                assertEquals("process_restart", text(input, "event"));
+                assertEquals(NwpErrorCodes.NWP_LLM_CONTEXT_NOT_FOUND, text(expected, "error"));
+                assertFalse(bool(expected, "replacement_created") || bool(expected, "stateless_fallback"));
+            }
+            case "015" -> {
+                var original = input.path("original");
+                var content = new StringBuilder();
+                original.path("chunks").forEach(chunk -> content.append(chunk.asText()));
+                assertEquals(content.toString(), text(expected, "ordered_content"));
+                assertNotEquals(text(original, "stream_id"), text(input, "replay_stream_id"));
+                assertEquals(0, number(expected, "provider_invocations") + number(expected, "additional_context_commits"));
+            }
+            case "016" -> {
+                assertEquals("valid", text(input, "authorization_at_admission"));
+                assertEquals("revoked", text(input, "authorization_at_commit"));
+                assertEquals(number(input.path("pre_state"), "version"), number(expected, "post_version"));
+                assertEquals(NwpErrorCodes.NWP_AUTH_NID_REVOKED, text(expected, "error"));
+            }
+            case "017" -> {
+                assertEquals(number(input, "max_contexts_per_principal"), number(input, "live_contexts"));
+                assertEquals(NwpErrorCodes.NWP_LLM_CONTEXT_LIMIT_EXCEEDED, text(expected, "error"));
+                assertFalse(bool(expected, "context_allocated"));
+            }
+            case "018" -> {
+                assertFalse(arrayContains(input.path("advertised_operations"), text(input.path("request"), "operation")));
+                assertEquals(NwpErrorCodes.NWP_LLM_CONTEXT_OPERATION_UNSUPPORTED, text(expected, "error"));
+            }
+            case "019" -> {
+                assertFalse(bool(input, "idempotency_key_present"));
+                assertEquals(NwpErrorCodes.NWP_ACTION_PARAMS_INVALID, text(expected, "error"));
+                assertFalse(bool(expected, "context_allocated") || bool(expected, "provider_dispatched"));
+            }
+            default -> fail("Unimplemented fixture contract: " + id);
+        }
+    }
+
+    private static String text(com.fasterxml.jackson.databind.JsonNode node, String field) {
+        return node.path(field).asText();
+    }
+    private static int number(com.fasterxml.jackson.databind.JsonNode node, String field) {
+        return node.path(field).asInt();
+    }
+    private static boolean bool(com.fasterxml.jackson.databind.JsonNode node, String field) {
+        return node.path(field).asBoolean();
+    }
+    private static boolean arrayContains(com.fasterxml.jackson.databind.JsonNode array, String value) {
+        for (var item : array) if (value.equals(item.asText())) return true;
+        return false;
     }
 
     private static void stateless() {

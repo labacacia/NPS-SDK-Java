@@ -323,21 +323,11 @@ All codec and registry errors throw `NpsCodecError` (unchecked). Network errors 
 
 ## Testing
 
-98 tests across all protocols + RFC-0002, run with:
+693 tests across the protocol, server-profile, and shared-conformance suites, run with:
 
 ```bash
 ./gradlew test
 ```
-
-Test classes:
-- `AnchorFrameCacheTest` — 12 tests
-- `FrameHeaderTest` — 8 tests
-- `NpsFrameCodecTest` — 15 tests
-- `NdpTest` — 25 tests (frames, registry, validator, matching)
-- `NipIdentityTest` — 13 tests (keygen, sign/verify, persist, frames)
-- `NipX509Tests` — 5 tests (RFC-0002: builder + verifier happy path + 4 negative paths)
-- `AcmeAgent01Tests` — 2 tests (RFC-0002: full ACME round-trip + tampered signature)
-- `NopTest` — 18 tests (backoff, frames, task status)
 
 ## License
 

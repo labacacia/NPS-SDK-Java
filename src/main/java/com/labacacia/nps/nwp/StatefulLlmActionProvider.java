@@ -4,6 +4,7 @@ package com.labacacia.nps.nwp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.labacacia.nps.core.NpsStatusCodes;
+import com.labacacia.nps.ncp.StreamFrame;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -18,6 +19,7 @@ public final class StatefulLlmActionProvider implements ActionNodeServer.Provide
     public static final String STATUS_REQUEST_ANCHOR = "nps:system:llm.context.status:request";
     public static final String RELEASE_REQUEST_ANCHOR = "nps:system:llm.context.release:request";
     public static final String COMPLETE_RESPONSE_ANCHOR = "nps:system:llm.complete:response";
+    public static final String COMPLETE_STREAM_ANCHOR = "nps:system:llm.complete:stream";
     public static final String STATUS_RESPONSE_ANCHOR = "nps:system:llm.context.status:response";
     public static final String RELEASE_RESPONSE_ANCHOR = "nps:system:llm.context.release:response";
 
@@ -26,10 +28,11 @@ public final class StatefulLlmActionProvider implements ActionNodeServer.Provide
     /** Authorization checkpoint for context-bearing actions. */
     public enum AuthorizationStage { ADMISSION, COMMIT }
 
-    /** Deployment-owned NIP/capability check. */
+    /** Deployment-owned NIP check for every supplied capability; absence fails closed. */
     @FunctionalInterface
     public interface ContextAuthorizer {
         void authorize(LlmContextOwner owner, String actionId, AuthorizationStage stage,
+                       List<String> requiredCapabilities,
                        ActionNodeServer.ActionContext context) throws Exception;
     }
 
@@ -40,6 +43,7 @@ public final class StatefulLlmActionProvider implements ActionNodeServer.Provide
         public String providerName;
         public String defaultModel;
         public boolean supportsTools;
+        public boolean supportsStream;
         public boolean supportsJsonMode;
         public String reasoningVisibility;
         public ContextAuthorizer authorizer;
@@ -111,7 +115,7 @@ public final class StatefulLlmActionProvider implements ActionNodeServer.Provide
             LlmActionCodec.LLM_COMPLETE,
             LlmActionCodec.LLM_CONTEXT_STATUS,
             LlmActionCodec.LLM_CONTEXT_RELEASE));
-        profile.put("supports_stream", false);
+        profile.put("supports_stream", options.supportsStream);
         profile.put("supports_tools", options.supportsTools);
         profile.put("supports_json_mode", options.supportsJsonMode);
         profile.put("context", context);
@@ -130,7 +134,13 @@ public final class StatefulLlmActionProvider implements ActionNodeServer.Provide
             (LlmActionCodec.LLM_COMPLETE.equals(frame.actionId()) &&
                 frame.params() != null && frame.params().containsKey("context"));
         if (!requiresContext) return;
-        checkAuthorization(owner(context), frame.actionId(), AuthorizationStage.ADMISSION, context);
+        if (LlmActionCodec.LLM_COMPLETE.equals(frame.actionId()) && Boolean.TRUE.equals(frame.async_())) {
+            LlmCompleteActionRequest request = decodeComplete(frame);
+            if (request.stream()) throw paramsError("stream=true cannot be combined with async=true");
+        }
+        checkAuthorization(
+            owner(context), frame.actionId(), AuthorizationStage.ADMISSION,
+            requiredCapabilities(frame), context);
     }
 
     @Override
@@ -152,8 +162,10 @@ public final class StatefulLlmActionProvider implements ActionNodeServer.Provide
         if (!options.supportsTools && request.tools() != null && !request.tools().isEmpty())
             throw paramsError("This node does not advertise LLM tool-definition support.");
         if (request.context() == null) return inner.execute(frame, context);
-        if (request.stream())
-            throw paramsError("The Action Server context coordinator supports unary/async completion, not streaming.");
+        if (request.stream() && !options.supportsStream)
+            throw paramsError("This node does not advertise LLM streaming support.");
+        if (request.stream() && Boolean.TRUE.equals(frame.async_()))
+            throw paramsError("stream=true cannot be combined with async=true");
         if ((request.context().operation() == LlmContextOperation.APPEND ||
             request.context().operation() == LlmContextOperation.FORK ||
             request.context().operation() == LlmContextOperation.RESET) &&
@@ -185,6 +197,19 @@ public final class StatefulLlmActionProvider implements ActionNodeServer.Provide
             guard.abort(NwpErrorCodes.NWP_NODE_UNAVAILABLE);
             throw new InterruptedException("LLM context completion was cancelled");
         }
+        if (request.stream()) {
+            if (providerResult == null || providerResult.stream == null) {
+                guard.abort(NwpErrorCodes.NWP_NODE_UNAVAILABLE);
+                throw internalError("Stateful streaming llm.complete returned no StreamFrame sequence.");
+            }
+            var coordinated = new ActionNodeServer.ActionExecutionResult();
+            coordinated.stream = coordinateStream(
+                providerResult.stream, guard, owner, frame, context);
+            coordinated.anchorRef = providerResult.anchorRef == null
+                ? COMPLETE_STREAM_ANCHOR : providerResult.anchorRef;
+            coordinated.tokenEst = providerResult.tokenEst;
+            return coordinated;
+        }
         if (providerResult == null || providerResult.result == null) {
             guard.abort(NwpErrorCodes.NWP_NODE_UNAVAILABLE);
             throw internalError("Stateful llm.complete returned no official response object.");
@@ -204,7 +229,9 @@ public final class StatefulLlmActionProvider implements ActionNodeServer.Provide
         }
 
         try {
-            checkAuthorization(owner, frame.actionId(), AuthorizationStage.COMMIT, context);
+            checkAuthorization(
+                owner, frame.actionId(), AuthorizationStage.COMMIT,
+                requiredCapabilities(frame), context);
         } catch (Exception error) {
             guard.abort(errorCode(error));
             throw error;
@@ -222,6 +249,110 @@ public final class StatefulLlmActionProvider implements ActionNodeServer.Provide
             throw mapStoreError(error);
         }
         return result(withContext(response, receipt), providerResult);
+    }
+
+    private ActionNodeServer.ActionStream coordinateStream(
+        ActionNodeServer.ActionStream source,
+        ReservationGuard guard,
+        LlmContextOwner owner,
+        ActionFrame requestFrame,
+        ActionNodeServer.ActionContext actionContext) {
+        return (cancellation, emit) -> {
+            StringBuilder content = new StringBuilder();
+            List<LlmToolCallDto> toolCalls = new ArrayList<>();
+            boolean[] terminalSeen = {false};
+            try {
+                source.write(cancellation, frame -> {
+                    if (terminalSeen[0]) throw internalError("LLM stream emitted frames after terminal.");
+                    if (frame == null) throw internalError("LLM stream emitted a null frame.");
+                    List<LlmCompleteStreamChunkDto> chunks = new ArrayList<>();
+                    try {
+                        for (Map<String, Object> payload : frame.data()) {
+                            chunks.add(JSON.convertValue(payload, LlmCompleteStreamChunkDto.class));
+                        }
+                    } catch (IllegalArgumentException error) {
+                        throw internalError(
+                            "Stateful llm.complete returned an invalid stream payload: " + error.getMessage());
+                    }
+                    if (!frame.isLast()) {
+                        for (var chunk : chunks) {
+                            if (chunk.stopReason() != null || chunk.error() != null ||
+                                chunk.usage() != null || chunk.context() != null) {
+                                throw internalError(
+                                    "LLM stream stop_reason, error, usage, and context are terminal-only fields.");
+                            }
+                        }
+                    }
+                    for (var chunk : chunks) {
+                        if (chunk.contentDelta() != null) content.append(chunk.contentDelta());
+                        if (chunk.toolCalls() != null) toolCalls.addAll(chunk.toolCalls());
+                    }
+                    List<LlmCompleteStreamChunkDto> sanitized = chunks.stream()
+                        .map(chunk -> new LlmCompleteStreamChunkDto(
+                            chunk.contentDelta(), chunk.toolCalls(), chunk.stopReason(),
+                            chunk.error(), chunk.usage(), null))
+                        .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+                    if (!frame.isLast()) {
+                        emit.emit(rewriteStreamFrame(frame, sanitized, null));
+                        return;
+                    }
+
+                    terminalSeen[0] = true;
+                    int terminalIndex = -1;
+                    boolean failed = frame.errorCode() != null;
+                    for (int i = 0; i < sanitized.size(); i++) {
+                        var chunk = sanitized.get(i);
+                        if (chunk.stopReason() != null) terminalIndex = i;
+                        if (chunk.stopReason() == LlmStopReason.ERROR || chunk.error() != null) failed = true;
+                    }
+                    if (failed) {
+                        String code = frame.errorCode() == null
+                            ? NwpErrorCodes.NWP_NODE_UNAVAILABLE : frame.errorCode();
+                        guard.abort(code);
+                        emit.emit(rewriteStreamFrame(frame, sanitized, code));
+                        return;
+                    }
+                    if (terminalIndex < 0)
+                        throw internalError("Successful LLM stream terminal frame requires stop_reason.");
+
+                    try {
+                        checkAuthorization(
+                            owner, requestFrame.actionId(), AuthorizationStage.COMMIT,
+                            requiredCapabilities(requestFrame), actionContext);
+                    } catch (Exception error) {
+                        guard.abort(errorCode(error));
+                        throw error;
+                    }
+                    if (cancellation.isCancelled())
+                        throw new InterruptedException("LLM context stream was cancelled");
+                    LlmContextReceiptDto receipt = guard.commit(new LlmMessageDto(
+                        "assistant", content.isEmpty() ? null : content.toString(),
+                        null, null, toolCalls.isEmpty() ? null : List.copyOf(toolCalls)));
+                    var terminal = sanitized.get(terminalIndex);
+                    sanitized.set(terminalIndex, new LlmCompleteStreamChunkDto(
+                        terminal.contentDelta(), terminal.toolCalls(), terminal.stopReason(),
+                        terminal.error(), terminal.usage(), receipt));
+                    emit.emit(rewriteStreamFrame(frame, sanitized, null));
+                });
+                if (!terminalSeen[0])
+                    throw internalError("Stateful llm.complete stream ended without a terminal frame.");
+            } finally {
+                guard.abort(NwpErrorCodes.NWP_NODE_UNAVAILABLE);
+            }
+        };
+    }
+
+    @SuppressWarnings("unchecked")
+    private static StreamFrame rewriteStreamFrame(
+        StreamFrame frame,
+        List<LlmCompleteStreamChunkDto> chunks,
+        String errorCode) {
+        List<Map<String, Object>> payloads = new ArrayList<>();
+        for (var chunk : chunks) payloads.add(JSON.convertValue(chunk, Map.class));
+        return new StreamFrame(
+            frame.streamId(), frame.seq(), frame.isLast() || errorCode != null,
+            payloads, frame.anchorRef(), frame.windowSize(),
+            errorCode == null ? frame.errorCode() : errorCode);
     }
 
     private ActionNodeServer.ActionExecutionResult status(
@@ -324,8 +455,32 @@ public final class StatefulLlmActionProvider implements ActionNodeServer.Provide
         LlmContextOwner owner,
         String actionId,
         AuthorizationStage stage,
+        List<String> requiredCapabilities,
         ActionNodeServer.ActionContext context) throws Exception {
-        if (options.authorizer != null) options.authorizer.authorize(owner, actionId, stage, context);
+        if (options.authorizer == null) {
+            throw new ActionNodeServer.ActionExecutionException(
+                403, NpsStatusCodes.NPS_AUTH_FORBIDDEN,
+                NwpErrorCodes.NWP_LLM_CONTEXT_FORBIDDEN,
+                "Stateful LLM context authorization is not configured.");
+        }
+        options.authorizer.authorize(
+            owner, actionId, stage, List.copyOf(requiredCapabilities), context);
+    }
+
+    private static List<String> requiredCapabilities(ActionFrame frame) {
+        if (LlmActionCodec.LLM_CONTEXT_STATUS.equals(frame.actionId()) ||
+            LlmActionCodec.LLM_CONTEXT_RELEASE.equals(frame.actionId())) {
+            return List.of(LlmActionCodec.CAPABILITY_LLM_CONTEXT);
+        }
+        var capabilities = new ArrayList<String>();
+        capabilities.add(LlmActionCodec.CAPABILITY_LLM_COMPLETE);
+        capabilities.add(LlmActionCodec.CAPABILITY_LLM_CONTEXT);
+        Map<String, Object> params = frame.params();
+        if (params != null && Boolean.TRUE.equals(params.get("stream")))
+            capabilities.add(LlmActionCodec.CAPABILITY_LLM_STREAM);
+        if (params != null && params.get("tools") instanceof List<?> tools && !tools.isEmpty())
+            capabilities.add(LlmActionCodec.CAPABILITY_LLM_TOOL_CALL);
+        return capabilities;
     }
 
     private static Map<String, Object> requireParams(ActionFrame frame) {

@@ -18,15 +18,23 @@ public final class StreamFrame implements NpsFrame {
     private final List<Map<String, Object>>  data;
     private final String                     anchorRef;  // nullable
     private final Integer                    windowSize; // nullable
+    private final String                     errorCode;  // nullable
 
     public StreamFrame(String streamId, int seq, boolean isLast,
                        List<Map<String, Object>> data, String anchorRef, Integer windowSize) {
+        this(streamId, seq, isLast, data, anchorRef, windowSize, null);
+    }
+
+    public StreamFrame(String streamId, int seq, boolean isLast,
+                       List<Map<String, Object>> data, String anchorRef, Integer windowSize,
+                       String errorCode) {
         this.streamId   = streamId;
         this.seq        = seq;
         this.isLast     = isLast;
         this.data       = data;
         this.anchorRef  = anchorRef;
         this.windowSize = windowSize;
+        this.errorCode  = errorCode;
     }
 
     @Override public FrameType    frameType()    { return FrameType.STREAM; }
@@ -38,6 +46,7 @@ public final class StreamFrame implements NpsFrame {
     public List<Map<String, Object>> data() { return data; }
     public String anchorRef()  { return anchorRef; }
     public Integer windowSize() { return windowSize; }
+    public String errorCode() { return errorCode; }
 
     @Override
     public Map<String, Object> toDict() {
@@ -48,6 +57,7 @@ public final class StreamFrame implements NpsFrame {
         m.put("data",        data);
         m.put("anchor_ref",  anchorRef);
         m.put("window_size", windowSize);
+        m.put("error_code",  errorCode);
         return m;
     }
 
@@ -60,7 +70,8 @@ public final class StreamFrame implements NpsFrame {
             (Boolean) d.get("is_last"),
             (List<Map<String, Object>>) d.get("data"),
             (String) d.get("anchor_ref"),
-            ws instanceof Number n ? n.intValue() : null
+            ws instanceof Number n ? n.intValue() : null,
+            (String) d.get("error_code")
         );
     }
 }

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.labacacia.nps.core.NpsStatusCodes;
+import com.labacacia.nps.ncp.StreamFrame;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -93,6 +94,7 @@ public final class ActionNodeServer implements HttpHandler {
     /** Result of a single action execution. */
     public static final class ActionExecutionResult {
         public Object result;      // nullable
+        public ActionStream stream; // nullable
         public String anchorRef;   // nullable
         public int tokenEst;       // 0 = unknown
 
@@ -103,14 +105,31 @@ public final class ActionNodeServer implements HttpHandler {
         }
     }
 
+    @FunctionalInterface
+    public interface ActionStreamEmitter {
+        void emit(StreamFrame frame) throws Exception;
+    }
+
+    @FunctionalInterface
+    public interface ActionStream {
+        void write(CancellationSignal cancellation, ActionStreamEmitter emitter) throws Exception;
+    }
+
     /** Execution context passed to the provider. */
     public record ActionContext(String agentNid, String requestId, String taskId,
                                 ActionSpec spec, int timeoutMs, String priority,
-                                CancellationSignal cancellation) {
+                                CancellationSignal cancellation, long wireInputBytes) {
         /** Backward-compatible constructor for providers that do not inspect cancellation. */
         public ActionContext(String agentNid, String requestId, String taskId,
                              ActionSpec spec, int timeoutMs, String priority) {
-            this(agentNid, requestId, taskId, spec, timeoutMs, priority, new CancellationSignal());
+            this(agentNid, requestId, taskId, spec, timeoutMs, priority,
+                new CancellationSignal(), 0L);
+        }
+
+        public ActionContext(String agentNid, String requestId, String taskId,
+                             ActionSpec spec, int timeoutMs, String priority,
+                             CancellationSignal cancellation) {
+            this(agentNid, requestId, taskId, spec, timeoutMs, priority, cancellation, 0L);
         }
     }
 
@@ -298,6 +317,7 @@ public final class ActionNodeServer implements HttpHandler {
         public String actionId;
         public String paramsHash;
         public Object result;     // nullable
+        public List<StreamFrame> streamFrames; // nullable, completed sequence
         public String anchorRef;  // nullable
         public String taskId;     // nullable (async)
         public Instant expiresAt;
@@ -446,8 +466,10 @@ public final class ActionNodeServer implements HttpHandler {
     @SuppressWarnings("unchecked")
     private void handleInvoke(HttpExchange ex) throws IOException {
         ActionFrame frame;
+        byte[] raw;
         try {
-            Map<String, Object> body = readJson(ex);
+            raw = ex.getRequestBody().readAllBytes();
+            Map<String, Object> body = readJson(raw);
             frame = ActionFrame.fromDict(body);
         } catch (Exception e) {
             writeError(ex, 400, "NPS-CLIENT-BAD-REQUEST", NwpErrorCodes.NWP_ACTION_PARAMS_INVALID, e.getMessage());
@@ -493,7 +515,8 @@ public final class ActionNodeServer implements HttpHandler {
 
         String effPriority = priority != null ? priority : "normal";
         ActionContext admissionCtx = new ActionContext(
-            agentNid, frame.requestId(), null, spec, effectiveTimeout, effPriority);
+            agentNid, frame.requestId(), null, spec, effectiveTimeout, effPriority,
+            new CancellationSignal(), raw.length);
         try {
             provider.authorize(frame, admissionCtx);
         } catch (Exception error) {
@@ -517,6 +540,11 @@ public final class ActionNodeServer implements HttpHandler {
                         frame.requestId(), null);
                     return;
                 }
+                if (cached.streamFrames != null) {
+                    writeStream(ex, replayStream(cached.streamFrames),
+                        new CancellationSignal(), frame.requestId());
+                    return;
+                }
                 writeCaps(ex, cached.result, cached.anchorRef, frame.requestId(), 0);
                 return;
             }
@@ -537,7 +565,8 @@ public final class ActionNodeServer implements HttpHandler {
 
             CancellationSignal cancellation = new CancellationSignal();
             ActionContext runCtx = new ActionContext(
-                agentNid, frame.requestId(), taskId, spec, effectiveTimeout, effPriority, cancellation);
+                agentNid, frame.requestId(), taskId, spec, effectiveTimeout, effPriority,
+                cancellation, raw.length);
             FutureTask<Void> task = new FutureTask<>(() -> {
                 runAsyncTask(frame, runCtx, effectiveTimeout);
                 return null;
@@ -552,7 +581,8 @@ public final class ActionNodeServer implements HttpHandler {
         // Synchronous path — bound the wait by the effective timeout, 504 on overrun.
         CancellationSignal cancellation = new CancellationSignal();
         ActionContext syncCtx = new ActionContext(
-            agentNid, frame.requestId(), null, spec, effectiveTimeout, effPriority, cancellation);
+            agentNid, frame.requestId(), null, spec, effectiveTimeout, effPriority,
+            cancellation, raw.length);
         CompletableFuture<ActionExecutionResult> future = CompletableFuture.supplyAsync(() -> {
             try {
                 return provider.execute(frame, syncCtx);
@@ -581,6 +611,20 @@ public final class ActionNodeServer implements HttpHandler {
         if (result == null) result = new ActionExecutionResult();
 
         String anchorRef = result.anchorRef != null ? result.anchorRef : spec.resultAnchor;
+        if (result.stream != null) {
+            List<StreamFrame> completed = writeStream(
+                ex, result.stream, cancellation, frame.requestId());
+            if (completed != null && frame.idempotencyKey() != null) {
+                IdempotentEntry entry = new IdempotentEntry();
+                entry.actionId = actionId;
+                entry.paramsHash = paramsHash;
+                entry.streamFrames = completed;
+                entry.anchorRef = anchorRef;
+                entry.expiresAt = clock.get().plus(opt.idempotencyTtl);
+                idempotency.tryStore(cacheActionId, frame.idempotencyKey(), entry);
+            }
+            return;
+        }
         if (frame.idempotencyKey() != null) {
             IdempotentEntry entry = new IdempotentEntry();
             entry.actionId = actionId;
@@ -794,6 +838,75 @@ public final class ActionNodeServer implements HttpHandler {
             NwpErrorCodes.NWP_NODE_UNAVAILABLE, fallback);
     }
 
+    private List<StreamFrame> writeStream(
+        HttpExchange ex,
+        ActionStream stream,
+        CancellationSignal cancellation,
+        String requestId) throws IOException {
+        String streamId = randomHex(16);
+        List<StreamFrame> emitted = new java.util.ArrayList<>();
+        int[] nextSeq = {0};
+        boolean[] terminal = {false};
+        ex.getResponseHeaders().set("Content-Type", "application/x-ndjson");
+        ex.getResponseHeaders().set(NwpHttpHeaders.NODE_TYPE, "action");
+        if (requestId != null) ex.getResponseHeaders().set(NwpHttpHeaders.REQUEST_ID, requestId);
+        ex.sendResponseHeaders(200, 0);
+        try (OutputStream output = ex.getResponseBody()) {
+            ActionStreamEmitter emitter = supplied -> {
+                if (cancellation.isCancelled()) throw new InterruptedException("action stream cancelled");
+                if (supplied == null) throw new ActionExecutionException(
+                    500, NpsStatusCodes.NPS_SERVER_INTERNAL, NwpErrorCodes.NWP_NODE_UNAVAILABLE,
+                    "action stream emitted a null frame");
+                if (terminal[0]) throw new ActionExecutionException(
+                    500, NpsStatusCodes.NPS_SERVER_INTERNAL, NwpErrorCodes.NWP_NODE_UNAVAILABLE,
+                    "action stream emitted frames after terminal");
+                if (supplied.seq() != nextSeq[0]) throw new ActionExecutionException(
+                    500, NpsStatusCodes.NPS_SERVER_INTERNAL, NwpErrorCodes.NWP_NODE_UNAVAILABLE,
+                    "action stream sequence is not contiguous from zero");
+                if (supplied.errorCode() != null && !supplied.isLast()) throw new ActionExecutionException(
+                    500, NpsStatusCodes.NPS_SERVER_INTERNAL, NwpErrorCodes.NWP_NODE_UNAVAILABLE,
+                    "action stream error_code is terminal-only");
+                StreamFrame frame = new StreamFrame(
+                    streamId, supplied.seq(), supplied.isLast(), supplied.data(),
+                    supplied.anchorRef(), supplied.windowSize(), supplied.errorCode());
+                output.write(MAPPER.writeValueAsBytes(frame.toDict()));
+                output.write('\n');
+                output.flush();
+                emitted.add(frame);
+                nextSeq[0]++;
+                terminal[0] = frame.isLast();
+            };
+            Exception failure = null;
+            try {
+                stream.write(cancellation, emitter);
+                if (!terminal[0]) failure = new ActionExecutionException(
+                    500, NpsStatusCodes.NPS_SERVER_INTERNAL, NwpErrorCodes.NWP_NODE_UNAVAILABLE,
+                    "action stream ended without a terminal frame");
+            } catch (Exception error) {
+                failure = error;
+            }
+            if (failure != null && !terminal[0] && !cancellation.isCancelled()) {
+                String code = failure instanceof ActionExecutionException actionError
+                    ? actionError.errorCode() : NwpErrorCodes.NWP_NODE_UNAVAILABLE;
+                try {
+                    emitter.emit(new StreamFrame(streamId, nextSeq[0], true,
+                        List.of(), null, null, code));
+                } catch (Exception ignored) { /* connection is already unusable */ }
+            }
+            if (failure != null || emitted.isEmpty() ||
+                emitted.get(emitted.size() - 1).errorCode() != null) return null;
+            return List.copyOf(emitted);
+        } finally {
+            ex.close();
+        }
+    }
+
+    private static ActionStream replayStream(List<StreamFrame> frames) {
+        return (cancellation, emitter) -> {
+            for (StreamFrame frame : frames) emitter.emit(frame);
+        };
+    }
+
     // ── Manifest ───────────────────────────────────────────────────────────────
 
     private Map<String, Object> actionsMap() {
@@ -825,7 +938,9 @@ public final class ActionNodeServer implements HttpHandler {
         m.put("preferred_format", "json");
         Map<String, Object> caps = new LinkedHashMap<>();
         caps.put("query", false);
-        caps.put("stream", false);
+        Object llm = opt.profiles == null ? null : opt.profiles.get("llm");
+        caps.put("stream", llm instanceof Map<?, ?> profile &&
+            Boolean.TRUE.equals(profile.get("supports_stream")));
         caps.put("token_budget_hint", true);
         m.put("capabilities", caps);
         Map<String, Object> auth = new LinkedHashMap<>();
@@ -838,8 +953,7 @@ public final class ActionNodeServer implements HttpHandler {
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, Object> readJson(HttpExchange ex) throws IOException {
-        byte[] raw = ex.getRequestBody().readAllBytes();
+    private Map<String, Object> readJson(byte[] raw) throws IOException {
         if (raw.length == 0) return new LinkedHashMap<>();
         return MAPPER.readValue(raw, Map.class);
     }
