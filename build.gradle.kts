@@ -68,7 +68,7 @@ publishing {
             pom {
                 name.set("NPS Java SDK")
                 description.set("Java SDK for the Neural Protocol Suite (NPS): NCP, NWP, NIP, NDP, and NOP.")
-                url.set("https://github.com/labacacia/NPS-sdk-java")
+                url.set("https://github.com/labacacia/NPS-SDK-Java")
 
                 licenses {
                     license {
@@ -86,9 +86,9 @@ publishing {
                 }
 
                 scm {
-                    connection.set("scm:git:https://github.com/labacacia/NPS-sdk-java.git")
-                    developerConnection.set("scm:git:https://github.com/labacacia/NPS-sdk-java.git")
-                    url.set("https://github.com/labacacia/NPS-sdk-java")
+                    connection.set("scm:git:https://github.com/labacacia/NPS-SDK-Java.git")
+                    developerConnection.set("scm:git:https://github.com/labacacia/NPS-SDK-Java.git")
+                    url.set("https://github.com/labacacia/NPS-SDK-Java")
                 }
             }
         }
