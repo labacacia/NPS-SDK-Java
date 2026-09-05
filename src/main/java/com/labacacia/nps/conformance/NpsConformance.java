@@ -37,6 +37,13 @@ public final class NpsConformance {
     );
 
     public static final List<NpsConformanceCase> NODE_L2_CASES = List.of(
+        c("TC-N2-AaaS-01", NODE_L2, "L2-01", "Internal work uses NOP TaskFrame", false),
+        c("TC-N2-AaaS-02", NODE_L2, "L2-02", "OpenTelemetry TaskFrame context injection", false),
+        c("TC-N2-AaaS-03", NODE_L2, "L2-03", "CGN-Estimate budget and token_est response", false),
+        c("TC-N2-AaaS-04", NODE_L2, "L2-04", "NOP preflight gates worker dispatch", false),
+        c("TC-N2-AaaS-05", NODE_L2, "L2-05", "NOP retry and timeout semantics", false),
+        c("TC-N2-AaaS-06", NODE_L2, "L2-06", "Asynchronous Action lifecycle", true),
+        c("TC-N2-AaaS-07", NODE_L2, "L2-07", "AlignStream CGN back-pressure", true),
         c("TC-N2-AnchorTopo-01", NODE_L2, "L2-08", "Snapshot of a 3-member cluster", false),
         c("TC-N2-AnchorTopo-02", NODE_L2, "L2-08", "Version monotonicity across joins", false),
         c("TC-N2-AnchorTopo-03", NODE_L2, "L2-08", "Sub-Anchor member surfaces", false),
@@ -49,10 +56,25 @@ public final class NpsConformance {
         c("TC-N2-AnchorTopo-07", NODE_L2, "L2-08", "Unsupported topology filter", false),
         c("TC-N2-AnchorTopo-08", NODE_L2, "L2-08", "Unsupported reserved topology type", false),
         c("TC-N2-AnchorStream-04", NODE_L2, "L2-08", "resync_required when version is too old", false),
-        c("TC-N2-Tls-01", NODE_L2, "NPS-RFC-0006", "ALPN nps/1.0 negotiated over TLS 1.3", false),
-        c("TC-N2-Tls-02", NODE_L2, "NPS-RFC-0006", "Mutual TLS required", false),
-        c("TC-N2-Tls-03", NODE_L2, "NPS-RFC-0006", "Client cert trust anchor and NID binding", false),
-        c("TC-N2-Tls-04", NODE_L2, "NPS-RFC-0006", "IdentFrame/certificate NID mismatch", false)
+        c("TC-N2-Tls-01", NODE_L2, "NPS-RFC-0006", "ALPN nps/1.0 negotiated over TLS 1.3", true),
+        c("TC-N2-Tls-02", NODE_L2, "NPS-RFC-0006", "Mutual TLS required", true),
+        c("TC-N2-Tls-03", NODE_L2, "NPS-RFC-0006", "Client cert trust anchor and NID binding", true),
+        c("TC-N2-Tls-04", NODE_L2, "NPS-RFC-0006", "IdentFrame/certificate NID mismatch", true),
+        c("TC-N2-BridgeIn-01", NODE_L2, "NPS-CR-0010", "MCP inbound required method set", true),
+        c("TC-N2-BridgeIn-02", NODE_L2, "NPS-CR-0010", "gRPC inbound round-trip", true),
+        c("TC-N2-BridgeIn-03", NODE_L2, "NPS-CR-0010", "A2A inbound round-trip", true),
+        c("TC-N2-BridgeIn-04", NODE_L2, "NPS-CR-0010", "Bare action resolution and ambiguity rejection", true),
+        c("TC-N2-BridgeIn-05", NODE_L2, "NPS-CR-0010", "Foreign-protocol error mapping", true),
+        c("TC-N2-BridgeIn-06", NODE_L2, "NPS-CR-0010", "Undeclared protocol or direction refusal", true),
+        c("TC-N2-HA-01", NODE_L2, "NPS-CR-0009", "cluster_epoch on topology read surfaces", true),
+        c("TC-N2-HA-02", NODE_L2, "NPS-CR-0009", "Planned anchor_failover wire shape", true),
+        c("TC-N2-HA-03", NODE_L2, "NPS-CR-0009", "Active-loss failover is terminal", true),
+        c("TC-N2-HA-04", NODE_L2, "NPS-CR-0009", "Quorum-loss wire shape and read-only mode", true),
+        c("TC-N2-HA-05", NODE_L2, "NPS-CR-0009", "Standby rejects topology writes", true),
+        c("TC-N2-HA-06", NODE_L2, "NPS-CR-0009", "Superseded leader is epoch fenced", true),
+        c("TC-N2-HA-07", NODE_L2, "NPS-CR-0009", "Registry resolves highest cluster_epoch", true),
+        c("TC-N2-HA-08", NODE_L2, "NPS-CR-0009", "Equal-epoch split-brain rejection", true),
+        c("TC-N2-HA-09", NODE_L2, "NPS-CR-0009", "Single-Anchor epoch-one compatibility", true)
     );
 
     private NpsConformance() {}
@@ -76,6 +98,11 @@ public final class NpsConformance {
             if (!seen.add(result.id())) return new NpsConformanceValidation(false, "Duplicate conformance case id '" + result.id() + "'.");
             if (!validResults.contains(result.result())) return new NpsConformanceValidation(false, "Case '" + result.id() + "' has invalid result '" + result.result() + "'.");
             if ("na".equals(result.result()) && !knownCase.optional()) return new NpsConformanceValidation(false, "Case '" + result.id() + "' is required and cannot be marked na.");
+            if ("na".equals(result.result())
+                    && ("TC-N2-AaaS-06".equals(result.id()) || "TC-N2-AaaS-07".equals(result.id()))
+                    && (result.message() == null || result.message().isBlank())) {
+                return new NpsConformanceValidation(false, "Case '" + result.id() + "' requires a non-empty message for a SHOULD exception.");
+            }
         }
 
         List<String> missing = new ArrayList<>();
@@ -85,6 +112,36 @@ public final class NpsConformance {
         if (!missing.isEmpty()) return new NpsConformanceValidation(false, "Missing conformance case results: " + String.join(", ", missing) + ".");
         if (manifest.cases().stream().anyMatch(c -> "fail".equals(c.result()) || "skip".equals(c.result()))) {
             return new NpsConformanceValidation(false, "Conformance manifest contains fail or skip results.");
+        }
+        String expectedVersion = NODE_L2.equals(manifest.profile()) ? "0.7" : "0.1";
+        if (!expectedVersion.equals(manifest.profileVersion())) {
+            return new NpsConformanceValidation(false, "Profile '" + manifest.profile() + "' requires manifest version '" + expectedVersion + "'.");
+        }
+        NpsConformanceSummary expectedSummary = new NpsConformanceSummary(
+            (int) manifest.cases().stream().filter(c -> "pass".equals(c.result())).count(),
+            (int) manifest.cases().stream().filter(c -> "fail".equals(c.result())).count(),
+            (int) manifest.cases().stream().filter(c -> "skip".equals(c.result())).count(),
+            (int) manifest.cases().stream().filter(c -> "na".equals(c.result())).count());
+        if (!expectedSummary.equals(manifest.summary())) {
+            return new NpsConformanceValidation(false, "Conformance manifest summary does not match case results.");
+        }
+        if (NODE_L2.equals(manifest.profile())) {
+            Map<String, String> results = manifest.cases().stream()
+                .collect(Collectors.toMap(NpsConformanceCaseResult::id, NpsConformanceCaseResult::result));
+            List<List<String>> families = List.of(
+                List.of("TC-N2-Tls-01", "TC-N2-Tls-02", "TC-N2-Tls-03", "TC-N2-Tls-04"),
+                List.of("TC-N2-BridgeIn-01", "TC-N2-BridgeIn-02", "TC-N2-BridgeIn-03", "TC-N2-BridgeIn-04", "TC-N2-BridgeIn-05", "TC-N2-BridgeIn-06"),
+                List.of("TC-N2-HA-01", "TC-N2-HA-02", "TC-N2-HA-03", "TC-N2-HA-04", "TC-N2-HA-05", "TC-N2-HA-06"),
+                List.of("TC-N2-HA-07", "TC-N2-HA-08"));
+            for (var family : families) {
+                Set<String> familyResults = family.stream().map(results::get).collect(Collectors.toSet());
+                if (familyResults.size() != 1 || !(familyResults.contains("pass") || familyResults.contains("na"))) {
+                    return new NpsConformanceValidation(false, "L2 case family '" + family.getFirst() + "' must be all pass or all na.");
+                }
+            }
+            if (("na".equals(results.get("TC-N2-HA-01"))) == ("na".equals(results.get("TC-N2-HA-09")))) {
+                return new NpsConformanceValidation(false, "L2 multi-Anchor HA and single-Anchor compatibility cases must have opposite applicability.");
+            }
         }
         return new NpsConformanceValidation(true, "Conformance manifest is valid.");
     }

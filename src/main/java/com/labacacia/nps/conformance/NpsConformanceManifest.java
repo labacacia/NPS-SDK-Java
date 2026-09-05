@@ -41,7 +41,7 @@ public record NpsConformanceManifest(
         }
         return new NpsConformanceManifest(
             profile,
-            NpsConformance.NODE_L2.equals(profile) ? "0.3" : "0.1",
+            NpsConformance.NODE_L2.equals(profile) ? "0.7" : "0.1",
             new NpsConformanceActor(iutName, iutVersion, iutNid),
             new NpsConformanceActor(peerName, peerVersion, null),
             new NpsConformanceRun(Instant.now().toString(), environment == null || environment.isBlank() ? "unspecified" : environment),

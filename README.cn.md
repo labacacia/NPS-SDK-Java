@@ -15,7 +15,7 @@
 
 ## 状态
 
-**v1.0.0-alpha.18 发布版 —— 可移植协议一致性**
+**v1.0.0-alpha.19 发布候选版 —— 可移植协议一致性**
 
 覆盖 NCP + NWP + NIP + NDP + NOP 五个协议，加完整 **NPS-RFC-0002** X.509 + ACME `agent-01` NID 证书原语（`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`）。
 
@@ -191,10 +191,10 @@ var results = NpsConformance.catalogForProfile(NpsConformance.NODE_L1).stream()
 var manifest = NpsConformanceManifest.create(
     NpsConformance.NODE_L1,
     "my-node",
-    "1.0.0-alpha.18",
+    "1.0.0-alpha.19",
     "urn:nps:node:example.com:my-node",
     "labacacia-fixture",
-    "1.0.0-alpha.18",
+    "1.0.0-alpha.19",
     results,
     "ci"
 );

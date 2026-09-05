@@ -44,6 +44,7 @@ public interface NcpErrorCodes {
     // ── Keepalive (v0.8) ─────────────────────────────────────────────────────
     String NCP_KEEPALIVE_TIMEOUT    = "NCP-KEEPALIVE-TIMEOUT";
     String NCP_REKEY_REQUIRED       = "NCP-REKEY-REQUIRED";
+    String NCP_EARLY_DATA_REJECTED  = "NCP-EARLY-DATA-REJECTED";
 
     // ── Native-mode TLS session-NID binding (NPS-RFC-0006 §6.3–§6.4) ─────────
     /**
@@ -81,6 +82,7 @@ public interface NcpErrorCodes {
         Map.entry(NCP_PREAMBLE_INVALID,          NpsStatusCodes.NPS_PROTO_PREAMBLE_INVALID),
         Map.entry(NCP_KEEPALIVE_TIMEOUT,         NpsStatusCodes.NPS_SERVER_TIMEOUT),
         Map.entry(NCP_REKEY_REQUIRED,            NpsStatusCodes.NPS_CLIENT_BAD_FRAME),
-        Map.entry(NCP_NID_MISMATCH,              NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED)
+        Map.entry(NCP_NID_MISMATCH,              NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
+        Map.entry(NCP_EARLY_DATA_REJECTED,       NpsStatusCodes.NPS_PROTO_VERSION_INCOMPATIBLE)
     );
 }

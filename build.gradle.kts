@@ -9,7 +9,7 @@ plugins {
 }
 
 group   = "com.labacacia.nps"
-version = "1.0.0-alpha.18"
+version = "1.0.0-alpha.19"
 
 java {
     toolchain { languageVersion = JavaLanguageVersion.of(21) }

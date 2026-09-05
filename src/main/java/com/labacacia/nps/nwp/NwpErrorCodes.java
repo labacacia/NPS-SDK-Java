@@ -62,6 +62,8 @@ public interface NwpErrorCodes {
     String NWP_SUBSCRIBE_FILTER_UNSUPPORTED  = "NWP-SUBSCRIBE-FILTER-UNSUPPORTED";
     String NWP_SUBSCRIBE_INTERRUPTED         = "NWP-SUBSCRIBE-INTERRUPTED";
     String NWP_SUBSCRIBE_SEQ_TOO_OLD         = "NWP-SUBSCRIBE-SEQ-TOO-OLD";
+    String NWP_SUBSCRIBE_LEASE_INVALID       = "NWP-SUBSCRIBE-LEASE-INVALID";
+    String NWP_SUBSCRIBE_LEASE_EXPIRED       = "NWP-SUBSCRIBE-LEASE-EXPIRED";
 
     // ── Budget / CGN ─────────────────────────────────────────────────────────
     String NWP_BUDGET_EXCEEDED     = "NWP-BUDGET-EXCEEDED";
@@ -174,6 +176,8 @@ public interface NwpErrorCodes {
         Map.entry(NWP_TOPOLOGY_DEPTH_UNSUPPORTED,  NpsStatusCodes.NPS_CLIENT_BAD_PARAM),
         Map.entry(NWP_TOPOLOGY_FILTER_UNSUPPORTED, NpsStatusCodes.NPS_CLIENT_BAD_PARAM),
         Map.entry(NWP_ANCHOR_NOT_LEADER,           NpsStatusCodes.NPS_CLIENT_CONFLICT),
-        Map.entry(NWP_ANCHOR_EPOCH_FENCED,         NpsStatusCodes.NPS_CLIENT_CONFLICT)
+        Map.entry(NWP_ANCHOR_EPOCH_FENCED,         NpsStatusCodes.NPS_CLIENT_CONFLICT),
+        Map.entry(NWP_SUBSCRIBE_LEASE_INVALID,     NpsStatusCodes.NPS_CLIENT_BAD_PARAM),
+        Map.entry(NWP_SUBSCRIBE_LEASE_EXPIRED,     NpsStatusCodes.NPS_CLIENT_GONE)
     );
 }
