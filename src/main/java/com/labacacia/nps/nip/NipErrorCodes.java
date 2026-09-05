@@ -73,6 +73,8 @@ public interface NipErrorCodes {
 
     // ── OCSP staple (roadmap) ─────────────────────────────────────────────────
     String OCSP_STAPLE_EXPIRED       = "NIP-OCSP-STAPLE-EXPIRED";
+    String OCSP_UNKNOWN              = "NIP-OCSP-UNKNOWN";
+    String REVOCATION_STATE_STALE    = "NIP-REVOCATION-STATE-STALE";
 
     // ── NIP v0.10 — node_roles ────────────────────────────────────────────────
     String CERT_NODE_ROLES_MISMATCH  = "NIP-CERT-NODE-ROLES-MISMATCH";
@@ -132,6 +134,8 @@ public interface NipErrorCodes {
         Map.entry(CERT_PARENT_REVOKED,              NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
         Map.entry(OCSP_STAPLE_EXPIRED,              NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
         Map.entry(CERT_NODE_ROLES_MISMATCH,         NpsStatusCodes.NPS_CLIENT_BAD_FRAME),
-        Map.entry(CERT_CAPABILITIES_EXCEEDED,       NpsStatusCodes.NPS_AUTH_FORBIDDEN)
+        Map.entry(CERT_CAPABILITIES_EXCEEDED,       NpsStatusCodes.NPS_AUTH_FORBIDDEN),
+        Map.entry(OCSP_UNKNOWN,                     NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
+        Map.entry(REVOCATION_STATE_STALE,           NpsStatusCodes.NPS_SERVER_UNAVAILABLE)
     );
 }

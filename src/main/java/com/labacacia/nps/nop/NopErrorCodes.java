@@ -73,6 +73,9 @@ public interface NopErrorCodes {
      * successor re-executing a side-effect-bearing node.</p>
      */
     String NOP_CLAIM_CONFLICT           = "NOP-CLAIM-CONFLICT";
+    String NOP_REPLAY_CONFLICT          = "NOP-REPLAY-CONFLICT";
+    String NOP_REPLAY_LIMIT             = "NOP-REPLAY-LIMIT";
+    String NOP_AGGREGATION_INVALID      = "NOP-AGGREGATION-INVALID";
 
     // ── NOP error → NPS status mapping ───────────────────────────────────────
 
@@ -110,6 +113,9 @@ public interface NopErrorCodes {
         Map.entry(NOP_RUNTIME_MAX_RUNTIME,      NpsStatusCodes.NPS_SERVER_TIMEOUT),
         Map.entry(NOP_TASK_RESULT_EXPIRED,      NpsStatusCodes.NPS_CLIENT_NOT_FOUND),
         Map.entry(NOP_STREAM_NAK_UNRESOLVABLE,  NpsStatusCodes.NPS_STREAM_SEQ_GAP),
-        Map.entry(NOP_CLAIM_CONFLICT,           NpsStatusCodes.NPS_CLIENT_CONFLICT)
+        Map.entry(NOP_CLAIM_CONFLICT,           NpsStatusCodes.NPS_CLIENT_CONFLICT),
+        Map.entry(NOP_REPLAY_CONFLICT,          NpsStatusCodes.NPS_CLIENT_CONFLICT),
+        Map.entry(NOP_REPLAY_LIMIT,             NpsStatusCodes.NPS_LIMIT_RESOURCE),
+        Map.entry(NOP_AGGREGATION_INVALID,      NpsStatusCodes.NPS_CLIENT_BAD_PARAM)
     );
 }
