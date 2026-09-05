@@ -15,7 +15,7 @@ Package group: `com.labacacia.nps` | Java 21+ | Gradle 8+
 
 ## Status
 
-**v1.0.0-alpha.18 release — portable protocol conformance**
+**v1.0.0-alpha.19 release candidate — portable protocol conformance**
 
 Covers all five NPS protocols: NCP + NWP + NIP + NDP + NOP, plus full **NPS-RFC-0002** X.509 + ACME `agent-01` NID certificate primitives (`com.labacacia.nps.nip.x509` + `com.labacacia.nps.nip.acme`).
 
@@ -193,10 +193,10 @@ var results = NpsConformance.catalogForProfile(NpsConformance.NODE_L1).stream()
 var manifest = NpsConformanceManifest.create(
     NpsConformance.NODE_L1,
     "my-node",
-    "1.0.0-alpha.18",
+    "1.0.0-alpha.19",
     "urn:nps:node:example.com:my-node",
     "labacacia-fixture",
-    "1.0.0-alpha.18",
+    "1.0.0-alpha.19",
     results,
     "ci"
 );
