@@ -55,6 +55,8 @@ public interface NdpErrorCodes {
      * {@code cluster_epoch}. The registry MUST NOT resolve arbitrarily.
      */
     String NDP_CLUSTER_SPLIT        = "NDP-CLUSTER-SPLIT";
+    String NDP_STATE_UNAVAILABLE    = "NDP-STATE-UNAVAILABLE";
+    String NDP_STATE_CORRUPT        = "NDP-STATE-CORRUPT";
 
     // ── NDP error → NPS status mapping ───────────────────────────────────────
 
@@ -81,6 +83,8 @@ public interface NdpErrorCodes {
         Map.entry(NDP_CA_ATTEST_REQUIRED,         NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
         Map.entry(NDP_REGISTRY_UNAVAILABLE,       NpsStatusCodes.NPS_SERVER_UNAVAILABLE),
         Map.entry(NDP_ANNOUNCE_STALE,             NpsStatusCodes.NPS_CLIENT_NOT_FOUND),
-        Map.entry(NDP_CLUSTER_SPLIT,              NpsStatusCodes.NPS_CLIENT_CONFLICT)
+        Map.entry(NDP_CLUSTER_SPLIT,              NpsStatusCodes.NPS_CLIENT_CONFLICT),
+        Map.entry(NDP_STATE_UNAVAILABLE,          NpsStatusCodes.NPS_SERVER_UNAVAILABLE),
+        Map.entry(NDP_STATE_CORRUPT,              NpsStatusCodes.NPS_SERVER_INTERNAL)
     );
 }
