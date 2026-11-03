@@ -9,7 +9,7 @@ plugins {
 }
 
 group   = "com.labacacia.nps"
-version = "1.0.0-alpha.19"
+version = "1.0.0-alpha.20"
 
 java {
     toolchain { languageVersion = JavaLanguageVersion.of(21) }
@@ -26,7 +26,7 @@ dependencies {
     implementation("org.msgpack:msgpack-core:0.9.11")
 
     // JSON
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.9")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.11")
 
     // Logging façade
     implementation("org.slf4j:slf4j-api:2.0.13")
@@ -34,8 +34,8 @@ dependencies {
     // BouncyCastle — X.509 cert building (NPS-RFC-0002).
     // Signing/verification still uses native JCA Ed25519; BC is only needed
     // for the X.509 builder API which the JDK does not expose publicly.
-    implementation("org.bouncycastle:bcprov-jdk18on:1.84")
-    implementation("org.bouncycastle:bcpkix-jdk18on:1.84")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.86")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.86")
 
     // ── Test ──────────────────────────────────────────────────────────────────
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.0")

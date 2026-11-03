@@ -62,7 +62,12 @@ public interface NcpErrorCodes {
     /**
      * Maps each NCP error code to its corresponding NPS status code.
      */
+    String NCP_FEATURE_NEGOTIATION_INVALID = "NCP-FEATURE-NEGOTIATION-INVALID";
+    String NCP_FEATURE_REQUIRED_UNSUPPORTED = "NCP-FEATURE-REQUIRED-UNSUPPORTED";
+
     Map<String, String> NCP_TO_NPS_STATUS = Map.ofEntries(
+        Map.entry(NCP_FEATURE_NEGOTIATION_INVALID, "NPS-CLIENT-BAD-FRAME"),
+        Map.entry(NCP_FEATURE_REQUIRED_UNSUPPORTED, "NPS-CLIENT-CONFLICT"),
         Map.entry(NCP_ANCHOR_NOT_FOUND,          NpsStatusCodes.NPS_CLIENT_NOT_FOUND),
         Map.entry(NCP_ANCHOR_SCHEMA_INVALID,     NpsStatusCodes.NPS_CLIENT_BAD_FRAME),
         Map.entry(NCP_ANCHOR_ID_MISMATCH,        NpsStatusCodes.NPS_CLIENT_CONFLICT),
