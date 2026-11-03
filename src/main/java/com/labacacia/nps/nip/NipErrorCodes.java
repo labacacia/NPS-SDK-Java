@@ -93,7 +93,20 @@ public interface NipErrorCodes {
     /**
      * Maps each NIP error code to its corresponding NPS status code.
      */
+    String CONTEXT_INVALID = "NIP-CONTEXT-INVALID";
+    String CONTEXT_UNTRUSTED = "NIP-CONTEXT-UNTRUSTED";
+    String CONTEXT_BINDING_MISMATCH = "NIP-CONTEXT-BINDING-MISMATCH";
+    String CONTEXT_EXPIRED = "NIP-CONTEXT-EXPIRED";
+    String CONTEXT_REPLAY = "NIP-CONTEXT-REPLAY";
+    String CONTEXT_VERIFIER_UNAVAILABLE = "NIP-CONTEXT-VERIFIER-UNAVAILABLE";
+
     Map<String, String> NIP_TO_NPS_STATUS = Map.ofEntries(
+        Map.entry(CONTEXT_INVALID, "NPS-CLIENT-BAD-FRAME"),
+        Map.entry(CONTEXT_UNTRUSTED, "NPS-AUTH-FORBIDDEN"),
+        Map.entry(CONTEXT_BINDING_MISMATCH, "NPS-AUTH-FORBIDDEN"),
+        Map.entry(CONTEXT_EXPIRED, "NPS-AUTH-FORBIDDEN"),
+        Map.entry(CONTEXT_REPLAY, "NPS-CLIENT-CONFLICT"),
+        Map.entry(CONTEXT_VERIFIER_UNAVAILABLE, "NPS-SERVER-UNAVAILABLE"),
         Map.entry(CERT_EXPIRED,                     NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
         Map.entry(CERT_REVOKED,                     NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
         Map.entry(CERT_SIGNATURE_INVALID,           NpsStatusCodes.NPS_AUTH_UNAUTHENTICATED),
