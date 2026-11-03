@@ -82,7 +82,10 @@ public interface NopErrorCodes {
     /**
      * Maps each NOP error code to its corresponding NPS status code.
      */
+    String NOP_EXECUTION_INDETERMINATE = "NOP-EXECUTION-INDETERMINATE";
+
     Map<String, String> NOP_TO_NPS_STATUS = Map.ofEntries(
+        Map.entry(NOP_EXECUTION_INDETERMINATE, "NPS-SERVER-INTERNAL"),
         Map.entry(NOP_TASK_NOT_FOUND,           NpsStatusCodes.NPS_CLIENT_NOT_FOUND),
         Map.entry(NOP_TASK_TIMEOUT,             NpsStatusCodes.NPS_SERVER_TIMEOUT),
         Map.entry(NOP_TASK_DAG_INVALID,         NpsStatusCodes.NPS_CLIENT_BAD_FRAME),
